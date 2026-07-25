@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Anyone can view the product catalog (customers browsing).
+    // Only the logged-in shop owner can add, edit, or delete products.
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Anyone can place an order (create), but only the logged-in
+    // shop owner can view, update, or delete orders.
+    match /orders/{orderId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+
+    // Settings (like whether to show prices) - readable by everyone,
+    // only editable by the logged-in shop owner.
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

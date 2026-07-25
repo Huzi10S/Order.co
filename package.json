@@ -1,22 +1,23 @@
 {
-  "name": "order-co-platform",
-  "private": true,
+  "name": "supreme-sanitary-orders",
   "version": "1.0.0",
-  "type": "module",
+  "private": true,
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "seed": "node scripts/seed.mjs"
   },
   "dependencies": {
-    "lucide-react": "^0.344.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "firebase": "^10.12.0",
+    "next": "^14.2.33",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@types/react": "^18.2.66",
-    "@types/react-dom": "^18.2.22",
-    "@vitejs/plugin-react": "^4.2.1",
-    "vite": "^5.1.6"
+    "autoprefixer": "^10.4.19",
+    "firebase-admin": "^12.2.0",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.6"
   }
 }

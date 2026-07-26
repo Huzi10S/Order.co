@@ -158,10 +158,10 @@ function Dashboard() {
   return (
     <div className={darkMode ? "dark" : ""}>
       <div className="min-h-screen bg-cloth">
-      <header className="bg-navy text-white sticky top-0 z-20 border-b border-white/10">
+      <header className="bg-navy dark:bg-surface text-white sticky top-0 z-20 border-b border-white/10 dark:border-ink/10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="font-bold text-lg">Shop dashboard</h1>
-          <button onClick={() => signOut(auth)} className="btn btn-ghost text-white/70 text-sm">Log out</button>
+          <button onClick={() => signOut(auth)} className="btn btn-ghost text-white/70 dark:text-ink/70 text-sm hover:text-white">Log out</button>
         </div>
         <div className="max-w-4xl mx-auto px-4 flex gap-1 pb-2">
           {[
@@ -172,8 +172,10 @@ function Dashboard() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`btn px-4 py-3 text-sm capitalize ${
-                tab === t ? "text-white border-b-2 border-white" : "text-white/70"
+              className={`btn px-4 py-2 text-sm capitalize transition rounded-lg ${
+                tab === t 
+                  ? "text-white border-b-2 border-white rounded-none dark:border-none dark:bg-accent dark:text-bg dark:rounded-md" 
+                  : "text-white/70 dark:bg-[#5D5C6E] dark:text-ink"
               }`}
             >
               {label}
@@ -439,12 +441,12 @@ function OrdersTab({ products }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search all orders..."
-            className="flex-1 border border-ink/15 rounded-lg px-4 py-3 bg-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
+            className="flex-1 border border-ink/15 rounded-lg px-4 py-3 bg-white dark:bg-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
           />
           <select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="border border-ink/15 rounded-lg px-4 py-3 bg-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition text-sm"
+            className="border border-ink/15 rounded-lg px-4 py-3 bg-white dark:bg-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition text-sm"
           >
             <option value="all">All time</option>
             <option value="today">Today</option>
@@ -455,13 +457,15 @@ function OrdersTab({ products }) {
 
         {!searchQuery && (
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex gap-1 bg-white rounded-lg p-1 border border-ink/10">
+            <div className="flex gap-1 bg-white dark:bg-surface rounded-lg p-1 border border-ink/10">
               {["new", "later", "history"].map((key) => (
             <button
               key={key}
               onClick={() => setView(key)}
               className={`btn px-3 py-1.5 rounded-md text-sm font-semibold transition ${
-                view === key ? "bg-navy text-white" : "text-ink/60"
+                view === key 
+                  ? "bg-navy text-white dark:bg-accent dark:text-bg" 
+                  : "text-ink/60 dark:bg-[#5D5C6E] dark:text-ink"
               }`}
             >
               {viewLabels[key]}
@@ -903,13 +907,15 @@ function DailySummaryModal({ orders, onClose }) {
             <option value="month">This Month</option>
             <option value="all">All Time</option>
           </select>
-          <div className="flex gap-1 bg-cloth rounded-lg p-1 border border-ink/10">
+          <div className="flex gap-1 bg-cloth dark:bg-surface rounded-lg p-1 border border-ink/10">
             {["stats", "insights"].map((st) => (
               <button
                 key={st}
                 onClick={() => setSubTab(st)}
                 className={`btn px-3 py-1.5 rounded-md text-sm capitalize ${
-                  subTab === st ? "bg-white text-navy shadow-sm" : "text-ink/60"
+                  subTab === st 
+                    ? "bg-white text-navy shadow-sm dark:bg-accent dark:text-bg dark:shadow-none" 
+                    : "text-ink/60 dark:bg-[#5D5C6E] dark:text-ink"
                 }`}
               >
                 {st}
@@ -1062,7 +1068,7 @@ function ProductsTab({ products, connError }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search products..."
-          className="flex-1 border border-ink/15 rounded-lg px-4 py-3 bg-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
+          className="flex-1 border border-ink/15 rounded-lg px-4 py-3 bg-white dark:bg-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
         />
         <button
           onClick={() => setAdding(true)}
@@ -1226,7 +1232,7 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
           </div>
           <button
             onClick={toggleShowPrice}
-            className={`btn w-12 h-7 rounded-full relative ${showPriceToCustomer ? "bg-leaf" : "bg-ink/20"}`}
+            className={`btn w-12 h-7 rounded-full relative ${showPriceToCustomer ? "bg-leaf dark:bg-accent" : "bg-ink/20"}`}
           >
             <span
               className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${
@@ -1242,12 +1248,12 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
           <div>
             <p className="font-semibold text-ink">Dark mode</p>
             <p className="text-xs text-ink/50 max-w-xs">
-              Switch the dashboard and customer page to a dark theme.
+              Switch the dashboard to a dark theme.
             </p>
           </div>
           <button
             onClick={toggleDarkMode}
-            className={`btn w-12 h-7 rounded-full relative ${darkMode ? "bg-leaf" : "bg-ink/20"}`}
+            className={`btn w-12 h-7 rounded-full relative ${darkMode ? "bg-leaf dark:bg-accent" : "bg-ink/20"}`}
           >
             <span
               className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${
@@ -1268,7 +1274,7 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
           </div>
           <button
             onClick={toggleSound}
-            className={`btn w-12 h-7 rounded-full relative ${soundEnabled ? "bg-leaf" : "bg-ink/20"}`}
+            className={`btn w-12 h-7 rounded-full relative ${soundEnabled ? "bg-leaf dark:bg-accent" : "bg-ink/20"}`}
           >
             <span
               className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${

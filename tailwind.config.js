@@ -21,6 +21,7 @@ module.exports = {
           light: "rgb(var(--color-rust-light) / <alpha-value>)",
         },
         leaf: "rgb(var(--color-leaf) / <alpha-value>)",
+        accent: "rgb(var(--color-accent) / <alpha-value>)",
       },
       backgroundColor: {
         white: "rgb(var(--color-surface) / <alpha-value>)",

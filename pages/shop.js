@@ -140,11 +140,24 @@ function LoginScreen() {
 function Dashboard() {
   const [tab, setTab] = useState("orders");
   const { products, error: prodConnError } = useProducts();
+  const [darkMode, setDarkMode] = useState(false);
 
+  useEffect(() => {
+    const theme = localStorage.getItem("theme");
+    if (theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+      setDarkMode(true);
+    }
+  }, []);
 
+  function toggleDarkMode() {
+    const next = !darkMode;
+    setDarkMode(next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  }
 
   return (
-    <div className="min-h-screen bg-cloth">
+    <div className={darkMode ? "dark" : ""}>
+      <div className="min-h-screen bg-cloth">
       <header className="bg-navy text-white sticky top-0 z-20 border-b border-white/10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="font-bold text-lg">Shop dashboard</h1>
@@ -172,8 +185,9 @@ function Dashboard() {
       <main className="max-w-4xl mx-auto px-4 py-5">
         {tab === "orders" && <OrdersTab products={products} />}
         {tab === "products" && <ProductsTab products={products} connError={prodConnError} />}
-        {tab === "settings" && <SettingsTab />}
+        {tab === "settings" && <SettingsTab darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}
       </main>
+    </div>
     </div>
   );
 }
@@ -1168,17 +1182,12 @@ function ProductForm({ product, onCancel, onSave }) {
   );
 }
 
-function SettingsTab() {
+function SettingsTab({ darkMode, toggleDarkMode }) {
   const { showPrice: showPriceToCustomer, loaded } = useSettings();
-  const [darkMode, setDarkMode] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   useEffect(() => {
     // Load local settings
-    const theme = localStorage.getItem("theme");
-    if (theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
-      setDarkMode(true);
-    }
     const sound = localStorage.getItem("soundEnabled");
     if (sound === "false") {
       setSoundEnabled(false);
@@ -1196,17 +1205,6 @@ function SettingsTab() {
     }
   }
 
-  function toggleDarkMode() {
-    const next = !darkMode;
-    setDarkMode(next);
-    if (next) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  }
 
   function toggleSound() {
     const next = !soundEnabled;

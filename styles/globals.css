@@ -17,17 +17,17 @@
 }
 
 .dark {
-  --color-bg: 18 20 28;
-  --color-surface: 30 34 45;
-  --color-ink: 243 244 246;
-  --color-navy: 30 41 59;
-  --color-navy-light: 51 65 85;
-  --color-navy-dark: 15 23 42;
-  --color-rust: 232 98 44;
-  --color-rust-dark: 198 78 30;
-  --color-rust-light: 242 137 93;
+  --color-bg: 10 14 23;
+  --color-surface: 19 26 43;
+  --color-ink: 232 236 245;
+  --color-navy: 59 111 224;
+  --color-navy-light: 84 135 242;
+  --color-navy-dark: 35 77 166;
+  --color-rust: 232 108 55;
+  --color-rust-dark: 200 85 35;
+  --color-rust-light: 250 145 100;
   --color-leaf: 46 160 113;
-  --color-text-white: 243 244 246;
+  --color-text-white: 232 236 245;
 }
 
 html, body {

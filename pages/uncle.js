@@ -40,8 +40,8 @@ export default function UnclePage() {
 }
 
 const USER_MAP = {
-  "murtaza h": "murtaza.h@supremesanitary.internal",
-  "hamza h": "hamza.h@supremesanitary.internal",
+  "murtaza h": "murtaza.h@shop.com",
+  "hamza h": "hamza.h@shop.com",
 };
 
 function LoginScreen() {

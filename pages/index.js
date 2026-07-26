@@ -153,7 +153,7 @@ export default function CustomerPage() {
   if (placed) {
     return (
       <div className="min-h-screen bg-cloth flex items-center justify-center p-6">
-        <div className="max-w-sm w-full bg-white rounded-2xl shadow-card p-8 text-center">
+        <div className="max-w-sm w-full bg-white rounded-xl border border-ink/10 p-8 text-center">
           <div className="w-16 h-16 rounded-full bg-leaf/10 flex items-center justify-center mx-auto mb-4">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
               <path d="M4 12l5 5L20 6" stroke="#1F8A5F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -176,7 +176,7 @@ export default function CustomerPage() {
 
   return (
     <div className="min-h-screen bg-cloth pb-28">
-      <header className="bg-navy text-white sticky top-0 z-20 shadow-card">
+      <header className="bg-navy text-white sticky top-0 z-20 border-b border-white/10">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-start justify-between">
           <div>
             <h1 className="text-lg font-bold tracking-tight">Supreme Sanitary</h1>
@@ -189,12 +189,12 @@ export default function CustomerPage() {
             Shop login
           </a>
         </div>
-        <div className="max-w-3xl mx-auto px-4 pb-3">
+        <div className="max-w-3xl mx-auto px-4 pb-4">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search products..."
-            className="w-full rounded-xl px-4 py-2.5 text-ink placeholder:text-ink/40 outline-none"
+            className="w-full rounded-xl px-4 py-3 bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:border-white focus:bg-white/20 transition"
           />
         </div>
       </header>
@@ -225,7 +225,12 @@ export default function CustomerPage() {
           </div>
         )}
         {!loading && sections.length === 0 && (
-          <p className="text-center text-ink/50 py-10">No products found.</p>
+          <div className="text-center py-12">
+            <svg className="w-12 h-12 text-ink/20 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <p className="text-ink/50">No products found.</p>
+          </div>
         )}
 
         {sections.map(({ section, items }) => {
@@ -234,12 +239,16 @@ export default function CustomerPage() {
             <section key={section} id={`section-${section}`} className="mb-3 scroll-mt-32">
               <button
                 onClick={() => toggleSection(section)}
-                className="w-full flex items-center justify-between bg-white rounded-xl shadow-card px-4 py-3 mb-2"
+                className="w-full flex items-center justify-between bg-white rounded-xl border border-ink/10 px-4 py-4 mb-2 active:bg-cloth/50 transition"
               >
-                <span className="text-navy font-bold text-base">
-                  {section} <span className="text-ink/40 font-normal text-sm">({items.length})</span>
+                <span className="text-navy font-semibold text-base flex items-center gap-2">
+                  {section} <span className="bg-ink/5 text-ink/60 text-xs py-0.5 px-2 rounded-full">{items.length}</span>
                 </span>
-                <span className={`text-navy transition-transform ${isOpen ? "rotate-180" : ""}`}>▾</span>
+                <span className={`text-navy/50 transition-transform ${isOpen ? "rotate-180" : ""}`}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </span>
               </button>
               {isOpen && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -264,7 +273,7 @@ export default function CustomerPage() {
           <div className="max-w-3xl mx-auto px-4 pb-4">
             <button
               onClick={() => setCartOpen(true)}
-              className="w-full bg-rust text-white rounded-2xl py-4 font-bold shadow-card flex items-center justify-between px-6 active:scale-[0.98] transition"
+              className="w-full bg-rust text-white rounded-xl py-4 font-semibold flex items-center justify-between px-6 active:scale-[0.98] transition"
             >
               <span>{totalItems} item{totalItems > 1 ? "s" : ""} selected</span>
               <span>View order →</span>
@@ -307,10 +316,10 @@ function ProductCard({ product, showPrice, cart, onChange }) {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-card p-3.5 flex flex-col gap-2.5">
+    <div className="bg-white rounded-xl border border-ink/10 p-4 flex flex-col gap-3">
       <div>
         <p className="font-semibold text-ink leading-snug">{product.name}</p>
-        <p className="text-xs text-ink/50">
+        <p className="text-xs text-ink/50 mt-0.5">
           {product.unit}
           {showPrice && product.price ? ` · ₹${product.price}` : ""}
         </p>
@@ -329,10 +338,10 @@ function ProductCard({ product, showPrice, cart, onChange }) {
       )}
 
       <div className="flex items-center justify-between gap-2 mt-auto">
-        <div className="flex items-center border border-ink/15 rounded-lg overflow-hidden">
+        <div className="flex items-center border border-ink/15 rounded-lg overflow-hidden h-10">
           <button
             onClick={() => setQty(Math.max(0, qty - 1))}
-            className="w-9 h-9 text-lg font-bold text-navy active:bg-cloth"
+            className="w-10 h-full text-lg font-medium text-navy active:bg-cloth/50 transition bg-cloth/30"
           >
             −
           </button>
@@ -342,17 +351,17 @@ function ProductCard({ product, showPrice, cart, onChange }) {
             pattern="[0-9]*"
             value={qty}
             onChange={(e) => setQty(Math.max(0, parseInt(e.target.value) || 0))}
-            className="w-12 text-center outline-none"
+            className="w-12 h-full text-center outline-none bg-transparent"
           />
           <button
             onClick={() => setQty(qty + 1)}
-            className="w-9 h-9 text-lg font-bold text-navy active:bg-cloth"
+            className="w-10 h-full text-lg font-medium text-navy active:bg-cloth/50 transition bg-cloth/30"
           >
             +
           </button>
         </div>
         {qty > 0 && (
-          <span className="text-xs font-semibold text-leaf bg-leaf/10 rounded-full px-2.5 py-1">
+          <span className="text-xs font-semibold text-leaf bg-leaf/10 rounded-md px-2 py-1">
             Added
           </span>
         )}
@@ -368,7 +377,7 @@ function CartDrawer({
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center sm:justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col shadow-card">
+      <div className="relative bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-xl max-h-[85vh] flex flex-col border border-ink/10">
         <div className="flex items-center justify-between px-5 py-4 border-b border-ink/10">
           <h2 className="font-bold text-navy text-lg">Your order</h2>
           <button onClick={onClose} className="text-ink/50 text-2xl leading-none px-2">×</button>
@@ -396,14 +405,14 @@ function CartDrawer({
             );
           })}
 
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 space-y-3">
             <div>
               <input
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="Your name (required)"
                 required
-                className="w-full border border-ink/15 rounded-lg px-3 py-2.5"
+                className="w-full border border-ink/15 rounded-lg px-4 py-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
               />
             </div>
             <input
@@ -412,7 +421,7 @@ function CartDrawer({
               placeholder="Phone number (optional)"
               type="tel"
               inputMode="tel"
-              className="w-full border border-ink/15 rounded-lg px-3 py-2.5"
+              className="w-full border border-ink/15 rounded-lg px-4 py-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
             />
           </div>
         </div>
@@ -421,7 +430,7 @@ function CartDrawer({
           <button
             onClick={onPlaceOrder}
             disabled={items.length === 0 || placing || !customerName.trim()}
-            className="w-full bg-navy disabled:opacity-40 text-white rounded-xl py-3.5 font-bold active:scale-[0.98] transition"
+            className="w-full bg-navy disabled:opacity-40 text-white rounded-xl py-3.5 font-semibold active:scale-[0.98] transition"
           >
             {placing ? "Sending..." : "Place order"}
           </button>

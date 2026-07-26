@@ -8,7 +8,7 @@ module.exports = {
     extend: {
       colors: {
         navy: {
-          DEFAULT: "#1B2A4A",
+          DEFAULT: "#0F1B3D",
           light: "#2A3D63",
           dark: "#121D33",
         },
@@ -17,7 +17,7 @@ module.exports = {
           dark: "#C64E1E",
           light: "#F2895D",
         },
-        cloth: "#F7F5F1",
+        cloth: "#F4F5F7",
         ink: "#1F2937",
         leaf: "#1F8A5F",
       },
@@ -31,9 +31,6 @@ module.exports = {
           "Arial",
           "sans-serif",
         ],
-      },
-      boxShadow: {
-        card: "0 1px 3px rgba(27,42,74,0.08), 0 1px 2px rgba(27,42,74,0.06)",
       },
     },
   },

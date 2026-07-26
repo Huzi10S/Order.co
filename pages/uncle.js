@@ -102,10 +102,10 @@ function LoginScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-navy flex items-center justify-center p-6">
-      <form onSubmit={handleLogin} className="bg-white rounded-2xl shadow-card p-8 max-w-sm w-full">
+    <div className="min-h-screen bg-cloth flex items-center justify-center p-6">
+      <form onSubmit={handleLogin} className="bg-white rounded-xl border border-ink/10 p-8 max-w-sm w-full">
         <p className="text-rust text-xs font-bold tracking-wide uppercase mb-1">Supreme Sanitary</p>
-        <h1 className="text-xl font-bold text-navy mb-1">Shop dashboard</h1>
+        <h1 className="text-2xl font-bold text-navy mb-1">Shop dashboard</h1>
         <p className="text-ink/50 text-sm mb-6">Log in to see orders and manage products</p>
         <input
           type="text"
@@ -114,7 +114,7 @@ function LoginScreen() {
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Username"
           autoCapitalize="words"
-          className="w-full border border-ink/15 rounded-lg px-3 py-2.5 mb-3"
+          className="w-full border border-ink/15 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
         />
         <input
           type="password"
@@ -122,17 +122,17 @@ function LoginScreen() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
-          className="w-full border border-ink/15 rounded-lg px-3 py-2.5 mb-4"
+          className="w-full border border-ink/15 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
         />
         {error && <p className="text-rust text-sm mb-3">{error}</p>}
         <button
           type="submit"
           disabled={busy}
-          className="w-full bg-navy text-white rounded-xl py-3 font-semibold disabled:opacity-50"
+          className="w-full bg-navy text-white rounded-xl py-3.5 font-semibold disabled:opacity-50"
         >
           {busy ? "Logging in..." : "Log in"}
         </button>
-        <a href="/" className="block text-center text-ink/40 text-xs mt-4">
+        <a href="/" className="block text-center text-ink/40 text-sm mt-5">
           ← Back to customer page
         </a>
       </form>
@@ -145,7 +145,7 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-cloth">
-      <header className="bg-navy text-white sticky top-0 z-20 shadow-card">
+      <header className="bg-navy text-white sticky top-0 z-20 border-b border-white/10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="font-bold text-lg">Shop dashboard</h1>
           <button onClick={() => signOut(auth)} className="text-white/70 text-sm">Log out</button>
@@ -202,9 +202,9 @@ function CopyFallbackModal({ text, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-card p-5 max-w-sm w-full">
+      <div className="relative bg-white rounded-xl border border-ink/10 p-5 max-w-sm w-full">
         <h2 className="font-bold text-navy text-lg mb-2">Copy this text</h2>
-        <p className="text-xs text-ink/50 mb-3">Long-press the text below to select and copy it manually.</p>
+        <p className="text-sm text-ink/50 mb-3">Long-press the text below to select and copy it manually.</p>
         <textarea
           readOnly
           value={text}
@@ -213,7 +213,7 @@ function CopyFallbackModal({ text, onClose }) {
         />
         <button
           onClick={onClose}
-          className="w-full bg-navy text-white rounded-lg py-2.5 text-sm font-semibold mt-3"
+          className="w-full bg-navy text-white rounded-xl py-3 text-sm font-semibold mt-3"
         >
           Done
         </button>
@@ -335,7 +335,7 @@ function OrdersTab() {
       )}
 
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-        <div className="flex gap-1 bg-white rounded-lg p-1 shadow-card">
+        <div className="flex gap-1 bg-white rounded-lg p-1 border border-ink/10">
           {["new", "later", "history"].map((key) => (
             <button
               key={key}
@@ -350,7 +350,7 @@ function OrdersTab() {
         </div>
         <button
           onClick={() => setShowSummary(true)}
-          className="text-sm font-semibold bg-rust text-white rounded-lg px-4 py-2"
+          className="text-sm font-semibold bg-rust text-white rounded-xl px-4 py-2.5"
         >
           Today's summary
         </button>
@@ -364,10 +364,10 @@ function OrdersTab() {
         </p>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {visible.map((order) => (
-          <div key={order.id} className="bg-white rounded-xl shadow-card p-4">
-            <div className="flex items-start justify-between mb-2">
+          <div key={order.id} className="bg-white rounded-xl border border-ink/10 p-4">
+            <div className="flex items-start justify-between mb-3">
               <div>
                 <p className="font-semibold text-ink">{order.customerName}</p>
                 {order.customerPhone && (
@@ -401,17 +401,17 @@ function OrdersTab() {
               ))}
             </div>
 
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap mt-2">
               <button
                 onClick={() => copyOrder(order)}
-                className="flex-1 bg-cloth border border-ink/15 rounded-lg py-2 text-sm font-semibold text-navy min-w-[100px]"
+                className="flex-1 bg-cloth border border-ink/15 rounded-lg py-2.5 text-sm font-semibold text-navy min-w-[100px]"
               >
                 {copiedId === order.id ? "Copied ✓" : "Copy for Excel"}
               </button>
               {(view === "new" || view === "later") && (
                 <button
                   onClick={() => openFulfillModal(order)}
-                  className="flex-1 bg-leaf text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
+                  className="flex-1 bg-leaf text-white rounded-lg py-2.5 text-sm font-semibold min-w-[100px]"
                 >
                   Fulfill now
                 </button>
@@ -419,7 +419,7 @@ function OrdersTab() {
               {view === "new" && (
                 <button
                   onClick={() => setStatus(order.id, "later")}
-                  className="flex-1 bg-navy text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
+                  className="flex-1 bg-navy text-white rounded-lg py-2.5 text-sm font-semibold min-w-[100px]"
                 >
                   Keep for later
                 </button>
@@ -427,7 +427,7 @@ function OrdersTab() {
               {(view === "new" || view === "later") && (
                 <button
                   onClick={() => setCancelOrder(order)}
-                  className="flex-1 bg-rust text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
+                  className="flex-1 bg-rust text-white rounded-lg py-2.5 text-sm font-semibold min-w-[100px]"
                 >
                   Cancel
                 </button>
@@ -493,7 +493,7 @@ function FulfillModal({ order, checks, setChecks, onCancel, onConfirm }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
-      <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col shadow-card">
+      <div className="relative bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-xl max-h-[85vh] flex flex-col border border-ink/10">
         <div className="px-5 py-4 border-b border-ink/10">
           <h2 className="font-bold text-navy text-lg">Fulfill order</h2>
           <p className="text-xs text-ink/50">
@@ -548,7 +548,7 @@ function ConfirmModal({ title, message, confirmLabel, onConfirm, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-card p-6 max-w-sm w-full">
+      <div className="relative bg-white rounded-xl border border-ink/10 p-6 max-w-sm w-full">
         <h2 className="font-bold text-navy text-lg mb-2">{title}</h2>
         <p className="text-sm text-ink/60 mb-5">{message}</p>
         <div className="flex gap-2">
@@ -578,7 +578,7 @@ function DailySummaryModal({ orders, itemCount, onClose }) {
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center sm:justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col shadow-card">
+      <div className="relative bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-xl max-h-[85vh] flex flex-col border border-ink/10">
         <div className="flex items-center justify-between px-5 py-4 border-b border-ink/10">
           <h2 className="font-bold text-navy text-lg">Today's summary</h2>
           <button onClick={onClose} className="text-ink/50 text-2xl leading-none px-2">×</button>
@@ -695,11 +695,11 @@ function ProductsTab() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search products..."
-          className="flex-1 border border-ink/15 rounded-lg px-3 py-2.5 bg-white"
+          className="flex-1 border border-ink/15 rounded-lg px-4 py-3 bg-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
         />
         <button
           onClick={() => setAdding(true)}
-          className="bg-rust text-white rounded-lg px-4 py-2.5 text-sm font-semibold whitespace-nowrap"
+          className="bg-rust text-white rounded-lg px-4 py-3 text-sm font-semibold whitespace-nowrap"
         >
           + Add product
         </button>
@@ -722,7 +722,7 @@ function ProductsTab() {
               onSave={saveProduct}
             />
           ) : (
-            <div key={p.id} className="bg-white rounded-xl shadow-card p-3.5 flex items-center justify-between">
+            <div key={p.id} className="bg-white rounded-xl border border-ink/10 p-4 flex items-center justify-between">
               <div>
                 <p className="font-medium text-ink text-sm">{p.name}</p>
                 <p className="text-xs text-ink/50">
@@ -766,18 +766,18 @@ function ProductForm({ product, onCancel, onSave }) {
   }
 
   return (
-    <form onSubmit={submit} className="bg-white rounded-xl shadow-card p-4 mb-3 space-y-2.5">
+    <form onSubmit={submit} className="bg-white rounded-xl border border-ink/10 p-4 mb-3 space-y-3">
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Product name"
         required
-        className="w-full border border-ink/15 rounded-lg px-3 py-2"
+        className="w-full border border-ink/15 rounded-lg px-4 py-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
       />
       <select
         value={section}
         onChange={(e) => setSection(e.target.value)}
-        className="w-full border border-ink/15 rounded-lg px-3 py-2 bg-white"
+        className="w-full border border-ink/15 rounded-lg px-4 py-3 bg-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
       >
         {SECTION_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
       </select>
@@ -786,7 +786,7 @@ function ProductForm({ product, onCancel, onSave }) {
           value={unit}
           onChange={(e) => setUnit(e.target.value)}
           placeholder="Unit (pcs, box, meter...)"
-          className="w-1/2 border border-ink/15 rounded-lg px-3 py-2"
+          className="w-1/2 border border-ink/15 rounded-lg px-4 py-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
         />
         <input
           value={price}
@@ -794,14 +794,14 @@ function ProductForm({ product, onCancel, onSave }) {
           placeholder="Price (optional)"
           type="number"
           inputMode="numeric"
-          className="w-1/2 border border-ink/15 rounded-lg px-3 py-2"
+          className="w-1/2 border border-ink/15 rounded-lg px-4 py-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
         />
       </div>
       <input
         value={variants}
         onChange={(e) => setVariants(e.target.value)}
         placeholder="Sizes, comma separated (optional) e.g. 6in, 8in, 9in"
-        className="w-full border border-ink/15 rounded-lg px-3 py-2"
+        className="w-full border border-ink/15 rounded-lg px-4 py-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
       />
       <div className="flex gap-2 pt-1">
         <button type="submit" className="flex-1 bg-navy text-white rounded-lg py-2 text-sm font-semibold">
@@ -846,7 +846,7 @@ function SettingsTab() {
   if (!loaded) return null;
 
   return (
-    <div className="bg-white rounded-xl shadow-card p-5">
+    <div className="bg-white rounded-xl border border-ink/10 p-5">
       <div className="flex items-center justify-between">
         <div>
           <p className="font-semibold text-ink">Show prices to customers</p>

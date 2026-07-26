@@ -170,6 +170,9 @@ function OrdersTab() {
   const [view, setView] = useState("new"); // "new" | "later" | "history"
   const [copiedId, setCopiedId] = useState(null);
   const [showSummary, setShowSummary] = useState(false);
+  const [fulfillOrder, setFulfillOrder] = useState(null);
+  const [fulfillChecks, setFulfillChecks] = useState({});
+  const [cancelOrder, setCancelOrder] = useState(null);
 
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
@@ -204,6 +207,42 @@ function OrdersTab() {
     } catch (e) {
       alert("Could not copy. Your browser may not allow clipboard access here.");
     }
+  }
+
+  function openFulfillModal(order) {
+    const checks = {};
+    order.items.forEach((_, i) => (checks[i] = true));
+    setFulfillChecks(checks);
+    setFulfillOrder(order);
+  }
+
+  async function confirmFulfill() {
+    const checkedItems = fulfillOrder.items.filter((_, i) => fulfillChecks[i]);
+    if (checkedItems.length > 0) {
+      const text = checkedItems
+        .map((it) => {
+          const name = it.variant ? `${it.name} (${it.variant})` : it.name;
+          return `${name}\t${it.qty}\t${it.unit}`;
+        })
+        .join("\n");
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (e) {
+        // clipboard failure shouldn't block marking the order fulfilled
+      }
+    }
+    await setStatus(fulfillOrder.id, "fulfilled");
+    setFulfillOrder(null);
+    alert(
+      checkedItems.length > 0
+        ? `Copied ${checkedItems.length} item${checkedItems.length > 1 ? "s" : ""} to your clipboard. Paste into Excel.`
+        : "Order marked fulfilled. No items were ticked, so nothing was copied."
+    );
+  }
+
+  async function confirmCancel() {
+    await setStatus(cancelOrder.id, "cancelled");
+    setCancelOrder(null);
   }
 
   const viewLabels = { new: "New orders", later: "Kept for later", history: "Past orders" };
@@ -284,43 +323,29 @@ function OrdersTab() {
               >
                 {copiedId === order.id ? "Copied ✓" : "Copy for Excel"}
               </button>
-              {view === "new" && (
-                <>
-                  <button
-                    onClick={() => setStatus(order.id, "fulfilled")}
-                    className="flex-1 bg-leaf text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
-                  >
-                    Fulfill now
-                  </button>
-                  <button
-                    onClick={() => setStatus(order.id, "later")}
-                    className="flex-1 bg-navy text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
-                  >
-                    Keep for later
-                  </button>
-                  <button
-                    onClick={() => setStatus(order.id, "cancelled")}
-                    className="flex-1 bg-rust text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
-                  >
-                    Cancel
-                  </button>
-                </>
+              {(view === "new" || view === "later") && (
+                <button
+                  onClick={() => openFulfillModal(order)}
+                  className="flex-1 bg-leaf text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
+                >
+                  Fulfill now
+                </button>
               )}
-              {view === "later" && (
-                <>
-                  <button
-                    onClick={() => setStatus(order.id, "fulfilled")}
-                    className="flex-1 bg-leaf text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
-                  >
-                    Fulfill now
-                  </button>
-                  <button
-                    onClick={() => setStatus(order.id, "cancelled")}
-                    className="flex-1 bg-rust text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
-                  >
-                    Cancel
-                  </button>
-                </>
+              {view === "new" && (
+                <button
+                  onClick={() => setStatus(order.id, "later")}
+                  className="flex-1 bg-navy text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
+                >
+                  Keep for later
+                </button>
+              )}
+              {(view === "new" || view === "later") && (
+                <button
+                  onClick={() => setCancelOrder(order)}
+                  className="flex-1 bg-rust text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
+                >
+                  Cancel
+                </button>
               )}
             </div>
           </div>
@@ -334,6 +359,121 @@ function OrdersTab() {
           onClose={() => setShowSummary(false)}
         />
       )}
+
+      {fulfillOrder && (
+        <FulfillModal
+          order={fulfillOrder}
+          checks={fulfillChecks}
+          setChecks={setFulfillChecks}
+          onCancel={() => setFulfillOrder(null)}
+          onConfirm={confirmFulfill}
+        />
+      )}
+
+      {cancelOrder && (
+        <ConfirmModal
+          title="Cancel this order?"
+          message={`This will cancel ${cancelOrder.customerName}'s order. It'll move to Past Orders marked as cancelled.`}
+          confirmLabel="Yes, cancel it"
+          onConfirm={confirmCancel}
+          onClose={() => setCancelOrder(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function FulfillModal({ order, checks, setChecks, onCancel, onConfirm }) {
+  const allChecked = order.items.every((_, i) => checks[i]);
+
+  function toggleAll() {
+    const next = {};
+    order.items.forEach((_, i) => (next[i] = !allChecked));
+    setChecks(next);
+  }
+
+  function toggleOne(i) {
+    setChecks((prev) => ({ ...prev, [i]: !prev[i] }));
+  }
+
+  const checkedCount = order.items.filter((_, i) => checks[i]).length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+      <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col shadow-card">
+        <div className="px-5 py-4 border-b border-ink/10">
+          <h2 className="font-bold text-navy text-lg">Fulfill order</h2>
+          <p className="text-xs text-ink/50">
+            {order.customerName} — untick anything you couldn't give
+          </p>
+        </div>
+
+        <div className="overflow-y-auto px-5 py-3 flex-1">
+          {order.items.map((it, i) => (
+            <label key={i} className="flex items-center gap-3 py-2.5 border-b border-ink/5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!checks[i]}
+                onChange={() => toggleOne(i)}
+                className="w-5 h-5 accent-leaf shrink-0"
+              />
+              <span className="flex-1 text-sm text-ink">
+                {it.name}{it.variant ? ` — ${it.variant}` : ""}
+              </span>
+              <span className="text-sm text-ink/60">{it.qty} {it.unit}</span>
+            </label>
+          ))}
+
+          <button
+            onClick={toggleAll}
+            className="w-full text-sm font-semibold text-navy underline mt-3 py-1"
+          >
+            {allChecked ? "Untick all" : "Tick all"}
+          </button>
+        </div>
+
+        <div className="p-5 border-t border-ink/10 flex gap-2">
+          <button
+            onClick={onCancel}
+            className="flex-1 bg-cloth border border-ink/15 rounded-lg py-3 text-sm font-semibold"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 bg-leaf text-white rounded-lg py-3 text-sm font-bold"
+          >
+            Fulfill ({checkedCount})
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmModal({ title, message, confirmLabel, onConfirm, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-card p-6 max-w-sm w-full">
+        <h2 className="font-bold text-navy text-lg mb-2">{title}</h2>
+        <p className="text-sm text-ink/60 mb-5">{message}</p>
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 bg-cloth border border-ink/15 rounded-lg py-2.5 text-sm font-semibold"
+          >
+            No, go back
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 bg-rust text-white rounded-lg py-2.5 text-sm font-semibold"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

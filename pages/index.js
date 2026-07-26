@@ -32,16 +32,40 @@ export default function CustomerPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [search, setSearch] = useState("");
   const [openSections, setOpenSections] = useState({});
+  const [connError, setConnError] = useState(null);
+  const [loadSlow, setLoadSlow] = useState(false);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "products"), (snap) => {
-      setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setLoading(false);
-    });
-    getDoc(doc(db, "settings", "config")).then((s) => {
-      if (s.exists()) setShowPrice(!!s.data().showPriceToCustomer);
-    });
-    return () => unsub();
+    const unsub = onSnapshot(
+      collection(db, "products"),
+      (snap) => {
+        setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+        setConnError(null);
+        setLoadSlow(false);
+      },
+      (err) => {
+        console.error("Products listener error:", err);
+        setConnError("Connection lost, trying to reconnect...");
+      }
+    );
+    getDoc(doc(db, "settings", "config"))
+      .then((s) => {
+        if (s.exists()) setShowPrice(!!s.data().showPriceToCustomer);
+      })
+      .catch((err) => {
+        console.error("Settings fetch error:", err);
+      });
+
+    // Loading timeout — if still loading after 8 seconds, show slow message
+    const slowTimer = setTimeout(() => {
+      setLoadSlow(true);
+    }, 8000);
+
+    return () => {
+      unsub();
+      clearTimeout(slowTimer);
+    };
   }, []);
 
   const sections = useMemo(() => {
@@ -196,7 +220,30 @@ export default function CustomerPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-4">
-        {loading && <p className="text-center text-ink/50 py-10">Loading products...</p>}
+        {connError && (
+          <div className="bg-rust/10 text-rust rounded-lg px-4 py-3 mb-4 text-sm font-medium text-center">
+            {connError}
+          </div>
+        )}
+
+        {loading && (
+          <div className="text-center py-10">
+            <p className="text-ink/50 mb-2">Loading products...</p>
+            {loadSlow && (
+              <div className="mt-3">
+                <p className="text-ink/40 text-sm mb-3">
+                  Taking longer than usual. Check your internet connection.
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-navy text-white rounded-lg px-5 py-2 text-sm font-semibold"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         {!loading && sections.length === 0 && (
           <p className="text-center text-ink/50 py-10">No products found.</p>
         )}
@@ -233,7 +280,7 @@ export default function CustomerPage() {
       </main>
 
       {totalItems > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-30">
+        <div className="fixed bottom-0 inset-x-0 z-30 pb-safe">
           <div className="max-w-3xl mx-auto px-4 pb-4">
             <button
               onClick={() => setCartOpen(true)}
@@ -312,9 +359,10 @@ function ProductCard({ product, showPrice, cart, onChange }) {
           <input
             type="number"
             inputMode="numeric"
+            pattern="[0-9]*"
             value={qty}
             onChange={(e) => setQty(Math.max(0, parseInt(e.target.value) || 0))}
-            className="w-12 text-center outline-none text-sm"
+            className="w-12 text-center outline-none"
           />
           <button
             onClick={() => setQty(qty + 1)}
@@ -375,7 +423,7 @@ function CartDrawer({
                 onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="Your name (required)"
                 required
-                className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm"
+                className="w-full border border-ink/15 rounded-lg px-3 py-2.5"
               />
             </div>
             <input
@@ -383,12 +431,13 @@ function CartDrawer({
               onChange={(e) => setCustomerPhone(e.target.value)}
               placeholder="Phone number (optional)"
               type="tel"
-              className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm"
+              inputMode="tel"
+              className="w-full border border-ink/15 rounded-lg px-3 py-2.5"
             />
           </div>
         </div>
 
-        <div className="p-5 border-t border-ink/10">
+        <div className="p-5 border-t border-ink/10 pb-safe">
           <button
             onClick={onPlaceOrder}
             disabled={items.length === 0 || placing || !customerName.trim()}

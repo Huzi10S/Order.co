@@ -25,6 +25,38 @@ const SECTION_OPTIONS = [
   "Bathroom Accessories", "Adhesives & Chemicals", "Other",
 ];
 
+/* ─── Clipboard helper with fallback for older browsers / Android WebViews ─── */
+function copyTextWithFallback(text) {
+  // Try modern Clipboard API first
+  if (typeof navigator !== "undefined" && navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    return navigator.clipboard.writeText(text).then(
+      function () { return true; },
+      function () { return fallbackCopy(text); }
+    );
+  }
+  // Fallback for older browsers
+  return Promise.resolve(fallbackCopy(text));
+}
+
+function fallbackCopy(text) {
+  try {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    ta.style.top = "-9999px";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    var ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+
 export default function UnclePage() {
   const [user, setUser] = useState(undefined); // undefined = checking, null = logged out
 
@@ -82,7 +114,7 @@ function LoginScreen() {
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Username"
           autoCapitalize="words"
-          className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm mb-3"
+          className="w-full border border-ink/15 rounded-lg px-3 py-2.5 mb-3"
         />
         <input
           type="password"
@@ -90,7 +122,7 @@ function LoginScreen() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
-          className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm mb-4"
+          className="w-full border border-ink/15 rounded-lg px-3 py-2.5 mb-4"
         />
         {error && <p className="text-rust text-sm mb-3">{error}</p>}
         <button
@@ -165,6 +197,31 @@ function isToday(timestamp) {
   );
 }
 
+/* ─── Modal for showing copyable text when clipboard APIs both fail ─── */
+function CopyFallbackModal({ text, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-card p-5 max-w-sm w-full">
+        <h2 className="font-bold text-navy text-lg mb-2">Copy this text</h2>
+        <p className="text-xs text-ink/50 mb-3">Long-press the text below to select and copy it manually.</p>
+        <textarea
+          readOnly
+          value={text}
+          className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm h-40 select-all"
+          onFocus={(e) => e.target.select()}
+        />
+        <button
+          onClick={onClose}
+          className="w-full bg-navy text-white rounded-lg py-2.5 text-sm font-semibold mt-3"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function OrdersTab() {
   const [orders, setOrders] = useState([]);
   const [view, setView] = useState("new"); // "new" | "later" | "history"
@@ -173,12 +230,22 @@ function OrdersTab() {
   const [fulfillOrder, setFulfillOrder] = useState(null);
   const [fulfillChecks, setFulfillChecks] = useState({});
   const [cancelOrder, setCancelOrder] = useState(null);
+  const [connError, setConnError] = useState(null);
+  const [fallbackText, setFallbackText] = useState(null);
 
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(q, (snap) => {
-      setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setConnError(null);
+      },
+      (err) => {
+        console.error("Orders listener error:", err);
+        setConnError("Connection lost, trying to reconnect...");
+      }
+    );
     return () => unsub();
   }, []);
 
@@ -195,17 +262,22 @@ function OrdersTab() {
   );
 
   async function setStatus(id, status) {
-    await updateDoc(doc(db, "orders", id), { status });
+    try {
+      await updateDoc(doc(db, "orders", id), { status });
+    } catch (err) {
+      alert("Could not update order. Please check your internet and try again.");
+      console.error(err);
+    }
   }
 
   async function copyOrder(order) {
     const text = formatOrderForExcel(order);
-    try {
-      await navigator.clipboard.writeText(text);
+    var ok = await copyTextWithFallback(text);
+    if (ok) {
       setCopiedId(order.id);
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch (e) {
-      alert("Could not copy. Your browser may not allow clipboard access here.");
+      setTimeout(function () { setCopiedId(null); }, 2000);
+    } else {
+      setFallbackText(text);
     }
   }
 
@@ -218,6 +290,7 @@ function OrdersTab() {
 
   async function confirmFulfill() {
     const checkedItems = fulfillOrder.items.filter((_, i) => fulfillChecks[i]);
+    var clipMsg = "";
     if (checkedItems.length > 0) {
       const text = checkedItems
         .map((it) => {
@@ -225,19 +298,25 @@ function OrdersTab() {
           return `${name}\t${it.qty}\t${it.unit}`;
         })
         .join("\n");
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch (e) {
-        // clipboard failure shouldn't block marking the order fulfilled
+      var ok = await copyTextWithFallback(text);
+      if (ok) {
+        clipMsg = "Copied " + checkedItems.length + " item" + (checkedItems.length > 1 ? "s" : "") + " to your clipboard. Paste into Excel.";
+      } else {
+        // Show fallback modal after fulfilling
+        setFallbackText(text);
       }
     }
-    await setStatus(fulfillOrder.id, "fulfilled");
+    try {
+      await setStatus(fulfillOrder.id, "fulfilled");
+    } catch (err) {
+      // setStatus already alerts
+    }
     setFulfillOrder(null);
-    alert(
-      checkedItems.length > 0
-        ? `Copied ${checkedItems.length} item${checkedItems.length > 1 ? "s" : ""} to your clipboard. Paste into Excel.`
-        : "Order marked fulfilled. No items were ticked, so nothing was copied."
-    );
+    if (clipMsg) {
+      alert(clipMsg);
+    } else if (checkedItems.length === 0) {
+      alert("Order marked fulfilled. No items were ticked, so nothing was copied.");
+    }
   }
 
   async function confirmCancel() {
@@ -249,6 +328,12 @@ function OrdersTab() {
 
   return (
     <div>
+      {connError && (
+        <div className="bg-rust/10 text-rust rounded-lg px-4 py-3 mb-4 text-sm font-medium text-center">
+          {connError}
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <div className="flex gap-1 bg-white rounded-lg p-1 shadow-card">
           {["new", "later", "history"].map((key) => (
@@ -377,6 +462,13 @@ function OrdersTab() {
           confirmLabel="Yes, cancel it"
           onConfirm={confirmCancel}
           onClose={() => setCancelOrder(null)}
+        />
+      )}
+
+      {fallbackText && (
+        <CopyFallbackModal
+          text={fallbackText}
+          onClose={() => setFallbackText(null)}
         />
       )}
     </div>
@@ -538,11 +630,20 @@ function ProductsTab() {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
+  const [connError, setConnError] = useState(null);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "products"), (snap) => {
-      setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    const unsub = onSnapshot(
+      collection(db, "products"),
+      (snap) => {
+        setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setConnError(null);
+      },
+      (err) => {
+        console.error("Products listener error:", err);
+        setConnError("Connection lost, trying to reconnect...");
+      }
+    );
     return () => unsub();
   }, []);
 
@@ -551,29 +652,50 @@ function ProductsTab() {
   );
 
   async function saveProduct(p) {
-    const { id, ...rest } = p;
-    await updateDoc(doc(db, "products", id), rest);
-    setEditing(null);
+    try {
+      const { id, ...rest } = p;
+      await updateDoc(doc(db, "products", id), rest);
+      setEditing(null);
+    } catch (err) {
+      alert("Could not save product. Please check your internet and try again.");
+      console.error(err);
+    }
   }
 
   async function removeProduct(id) {
     if (!confirm("Delete this product? This can't be undone.")) return;
-    await deleteDoc(doc(db, "products", id));
+    try {
+      await deleteDoc(doc(db, "products", id));
+    } catch (err) {
+      alert("Could not delete product. Please check your internet and try again.");
+      console.error(err);
+    }
   }
 
   async function createProduct(p) {
-    await addDoc(collection(db, "products"), p);
-    setAdding(false);
+    try {
+      await addDoc(collection(db, "products"), p);
+      setAdding(false);
+    } catch (err) {
+      alert("Could not add product. Please check your internet and try again.");
+      console.error(err);
+    }
   }
 
   return (
     <div>
+      {connError && (
+        <div className="bg-rust/10 text-rust rounded-lg px-4 py-3 mb-4 text-sm font-medium text-center">
+          {connError}
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4 gap-3">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search products..."
-          className="flex-1 border border-ink/15 rounded-lg px-3 py-2.5 text-sm bg-white"
+          className="flex-1 border border-ink/15 rounded-lg px-3 py-2.5 bg-white"
         />
         <button
           onClick={() => setAdding(true)}
@@ -650,12 +772,12 @@ function ProductForm({ product, onCancel, onSave }) {
         onChange={(e) => setName(e.target.value)}
         placeholder="Product name"
         required
-        className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm"
+        className="w-full border border-ink/15 rounded-lg px-3 py-2"
       />
       <select
         value={section}
         onChange={(e) => setSection(e.target.value)}
-        className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm bg-white"
+        className="w-full border border-ink/15 rounded-lg px-3 py-2 bg-white"
       >
         {SECTION_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
       </select>
@@ -664,21 +786,22 @@ function ProductForm({ product, onCancel, onSave }) {
           value={unit}
           onChange={(e) => setUnit(e.target.value)}
           placeholder="Unit (pcs, box, meter...)"
-          className="w-1/2 border border-ink/15 rounded-lg px-3 py-2 text-sm"
+          className="w-1/2 border border-ink/15 rounded-lg px-3 py-2"
         />
         <input
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           placeholder="Price (optional)"
           type="number"
-          className="w-1/2 border border-ink/15 rounded-lg px-3 py-2 text-sm"
+          inputMode="numeric"
+          className="w-1/2 border border-ink/15 rounded-lg px-3 py-2"
         />
       </div>
       <input
         value={variants}
         onChange={(e) => setVariants(e.target.value)}
         placeholder="Sizes, comma separated (optional) e.g. 6in, 8in, 9in"
-        className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm"
+        className="w-full border border-ink/15 rounded-lg px-3 py-2"
       />
       <div className="flex gap-2 pt-1">
         <button type="submit" className="flex-1 bg-navy text-white rounded-lg py-2 text-sm font-semibold">
@@ -697,16 +820,27 @@ function SettingsTab() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    getDoc(doc(db, "settings", "config")).then((s) => {
-      if (s.exists()) setShowPriceToCustomer(!!s.data().showPriceToCustomer);
-      setLoaded(true);
-    });
+    getDoc(doc(db, "settings", "config"))
+      .then((s) => {
+        if (s.exists()) setShowPriceToCustomer(!!s.data().showPriceToCustomer);
+        setLoaded(true);
+      })
+      .catch((err) => {
+        console.error("Settings fetch error:", err);
+        setLoaded(true);
+      });
   }, []);
 
   async function toggle() {
     const next = !showPriceToCustomer;
     setShowPriceToCustomer(next);
-    await setDoc(doc(db, "settings", "config"), { showPriceToCustomer: next }, { merge: true });
+    try {
+      await setDoc(doc(db, "settings", "config"), { showPriceToCustomer: next }, { merge: true });
+    } catch (err) {
+      alert("Could not save setting. Please check your internet and try again.");
+      setShowPriceToCustomer(!next); // revert
+      console.error(err);
+    }
   }
 
   if (!loaded) return null;

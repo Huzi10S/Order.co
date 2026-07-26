@@ -22,3 +22,13 @@ button {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Prevent iOS Safari auto-zoom on input focus (requires >= 16px) */
+input, select, textarea {
+  font-size: 16px !important;
+}
+
+/* Safe-area bottom padding utility for notched iPhones */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

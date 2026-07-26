@@ -31,6 +31,7 @@ export default function CustomerPage() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [search, setSearch] = useState("");
+  const [openSections, setOpenSections] = useState({});
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "products"), (snap) => {
@@ -62,6 +63,19 @@ export default function CustomerPage() {
     }
     return order.map((s) => ({ section: s, items: bySection[s] }));
   }, [products, search]);
+
+  const isSearching = search.trim().length > 0;
+
+  function toggleSection(section) {
+    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  }
+
+  function scrollToSection(section) {
+    setOpenSections((prev) => ({ ...prev, [section]: true }));
+    setTimeout(() => {
+      document.getElementById(`section-${section}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  }
 
   const cartItems = Object.values(cart);
   const totalItems = cartItems.reduce((sum, c) => sum + c.qty, 0);
@@ -154,6 +168,19 @@ export default function CustomerPage() {
             className="w-full rounded-xl px-4 py-2.5 text-ink placeholder:text-ink/40 outline-none"
           />
         </div>
+        {!isSearching && sections.length > 0 && (
+          <div className="max-w-3xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
+            {sections.map(({ section }) => (
+              <button
+                key={section}
+                onClick={() => scrollToSection(section)}
+                className="whitespace-nowrap text-xs font-semibold bg-white/10 text-white rounded-full px-3 py-1.5 active:bg-white/20"
+              >
+                {section}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-4">
@@ -162,22 +189,35 @@ export default function CustomerPage() {
           <p className="text-center text-ink/50 py-10">No products found.</p>
         )}
 
-        {sections.map(({ section, items }) => (
-          <section key={section} className="mb-6">
-            <h2 className="text-navy font-bold text-base mb-2 px-1">{section}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {items.map((p) => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  showPrice={showPrice}
-                  cart={cart}
-                  onChange={updateCart}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
+        {sections.map(({ section, items }) => {
+          const isOpen = isSearching || !!openSections[section];
+          return (
+            <section key={section} id={`section-${section}`} className="mb-3 scroll-mt-32">
+              <button
+                onClick={() => toggleSection(section)}
+                className="w-full flex items-center justify-between bg-white rounded-xl shadow-card px-4 py-3 mb-2"
+              >
+                <span className="text-navy font-bold text-base">
+                  {section} <span className="text-ink/40 font-normal text-sm">({items.length})</span>
+                </span>
+                <span className={`text-navy transition-transform ${isOpen ? "rotate-180" : ""}`}>▾</span>
+              </button>
+              {isOpen && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {items.map((p) => (
+                    <ProductCard
+                      key={p.id}
+                      product={p}
+                      showPrice={showPrice}
+                      cart={cart}
+                      onChange={updateCart}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })}
       </main>
 
       {totalItems > 0 && (

@@ -8,22 +8,17 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
-
-const SECTION_ORDER = [
-  "Pipes", "Elbows", "Tees", "Sockets", "Shoes", "Reducers & Bushings",
-  "Unions", "End Caps & Plugs", "Valves", "Adapters & Nipples", "Saddles",
-  "Vent Cowls", "Traps & Bends", "Taps & Showers", "Sanitaryware",
-  "Bathroom Accessories", "Adhesives & Chemicals", "Other",
-];
+import { PRODUCT_SECTIONS } from "../lib/constants";
+import { useProducts } from "../lib/useProducts";
+import { useSettings } from "../lib/useSettings";
 
 function cartKey(productId, variant) {
   return variant ? `${productId}::${variant}` : productId;
 }
 
 export default function CustomerPage() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showPrice, setShowPrice] = useState(false);
+  const { products, loading, error: connError } = useProducts();
+  const { showPrice } = useSettings();
   const [cart, setCart] = useState({}); // key -> { product, variant, qty }
   const [cartOpen, setCartOpen] = useState(false);
   const [placing, setPlacing] = useState(false);
@@ -32,41 +27,16 @@ export default function CustomerPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [search, setSearch] = useState("");
   const [openSections, setOpenSections] = useState({});
-  const [connError, setConnError] = useState(null);
   const [loadSlow, setLoadSlow] = useState(false);
 
   useEffect(() => {
-    const unsub = onSnapshot(
-      collection(db, "products"),
-      (snap) => {
-        setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setLoading(false);
-        setConnError(null);
-        setLoadSlow(false);
-      },
-      (err) => {
-        console.error("Products listener error:", err);
-        setConnError("Connection lost, trying to reconnect...");
-      }
-    );
-    getDoc(doc(db, "settings", "config"))
-      .then((s) => {
-        if (s.exists()) setShowPrice(!!s.data().showPriceToCustomer);
-      })
-      .catch((err) => {
-        console.error("Settings fetch error:", err);
-      });
-
-    // Loading timeout — if still loading after 8 seconds, show slow message
-    const slowTimer = setTimeout(() => {
-      setLoadSlow(true);
-    }, 8000);
-
-    return () => {
-      unsub();
-      clearTimeout(slowTimer);
-    };
-  }, []);
+    if (loading) {
+      const slowTimer = setTimeout(() => setLoadSlow(true), 8000);
+      return () => clearTimeout(slowTimer);
+    } else {
+      setLoadSlow(false);
+    }
+  }, [loading]);
 
   const sections = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -81,7 +51,7 @@ export default function CustomerPage() {
     }
     const order = q
       ? Object.keys(bySection)
-      : SECTION_ORDER.filter((s) => bySection[s]);
+      : PRODUCT_SECTIONS.filter((s) => bySection[s]);
     for (const s of Object.keys(bySection)) {
       if (!order.includes(s)) order.push(s);
     }

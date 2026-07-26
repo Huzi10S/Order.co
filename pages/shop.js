@@ -17,13 +17,10 @@ import {
   query,
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
+import { PRODUCT_SECTIONS } from "../lib/constants";
+import { useProducts } from "../lib/useProducts";
+import { useSettings } from "../lib/useSettings";
 
-const SECTION_OPTIONS = [
-  "Pipes", "Elbows", "Tees", "Sockets", "Shoes", "Reducers & Bushings",
-  "Unions", "End Caps & Plugs", "Valves", "Adapters & Nipples", "Saddles",
-  "Vent Cowls", "Traps & Bends", "Taps & Showers", "Sanitaryware",
-  "Bathroom Accessories", "Adhesives & Chemicals", "Other",
-];
 
 /* ─── Clipboard helper with fallback for older browsers / Android WebViews ─── */
 function copyTextWithFallback(text) {
@@ -142,23 +139,9 @@ function LoginScreen() {
 
 function Dashboard() {
   const [tab, setTab] = useState("orders");
-  const [products, setProducts] = useState([]);
-  const [prodConnError, setProdConnError] = useState(null);
+  const { products, error: prodConnError } = useProducts();
 
-  useEffect(() => {
-    const unsub = onSnapshot(
-      collection(db, "products"),
-      (snap) => {
-        setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setProdConnError(null);
-      },
-      (err) => {
-        console.error("Products listener error:", err);
-        setProdConnError("Connection lost, trying to reconnect...");
-      }
-    );
-    return () => unsub();
-  }, []);
+
 
   return (
     <div className="min-h-screen bg-cloth">
@@ -922,7 +905,7 @@ function DailySummaryModal({ orders, onClose }) {
         </div>
 
         <div className="overflow-y-auto px-5 py-4 flex-1">
-          {view === "stats" ? (
+          {subTab === "stats" ? (
             <>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="bg-cloth rounded-lg p-3 text-center">
@@ -1115,7 +1098,7 @@ function ProductsTab({ products, connError }) {
 
 function ProductForm({ product, onCancel, onSave }) {
   const [name, setName] = useState(product?.name || "");
-  const [section, setSection] = useState(product?.section || SECTION_OPTIONS[0]);
+  const [section, setSection] = useState(product?.section || PRODUCT_SECTIONS[0]);
   const [unit, setUnit] = useState(product?.unit || "pcs");
   const [price, setPrice] = useState(product?.price || "");
   const [variants, setVariants] = useState((product?.variants || []).join(", "));
@@ -1149,7 +1132,7 @@ function ProductForm({ product, onCancel, onSave }) {
         onChange={(e) => setSection(e.target.value)}
         className="w-full border border-ink/15 rounded-lg px-4 py-3 bg-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
       >
-        {SECTION_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+        {PRODUCT_SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
       </select>
       <div className="flex gap-2">
         <input
@@ -1186,10 +1169,9 @@ function ProductForm({ product, onCancel, onSave }) {
 }
 
 function SettingsTab() {
-  const [showPriceToCustomer, setShowPriceToCustomer] = useState(false);
+  const { showPrice: showPriceToCustomer, loaded } = useSettings();
   const [darkMode, setDarkMode] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     // Load local settings
@@ -1201,27 +1183,15 @@ function SettingsTab() {
     if (sound === "false") {
       setSoundEnabled(false);
     }
-
-    // Load remote settings
-    getDoc(doc(db, "settings", "config"))
-      .then((s) => {
-        if (s.exists()) setShowPriceToCustomer(!!s.data().showPriceToCustomer);
-        setLoaded(true);
-      })
-      .catch((err) => {
-        console.error("Settings fetch error:", err);
-        setLoaded(true);
-      });
   }, []);
 
   async function toggleShowPrice() {
     const next = !showPriceToCustomer;
-    setShowPriceToCustomer(next);
+    // We update Firestore; the onSnapshot listener in useSettings will trigger UI updates
     try {
       await setDoc(doc(db, "settings", "config"), { showPriceToCustomer: next }, { merge: true });
     } catch (err) {
       alert("Could not save setting. Please check your internet and try again.");
-      setShowPriceToCustomer(!next); // revert
       console.error(err);
     }
   }

@@ -61,6 +61,7 @@ function LoginScreen() {
   return (
     <div className="min-h-screen bg-navy flex items-center justify-center p-6">
       <form onSubmit={handleLogin} className="bg-white rounded-2xl shadow-card p-8 max-w-sm w-full">
+        <p className="text-rust text-xs font-bold tracking-wide uppercase mb-1">Supreme Sanitary</p>
         <h1 className="text-xl font-bold text-navy mb-1">Shop dashboard</h1>
         <p className="text-ink/50 text-sm mb-6">Log in to see orders and manage products</p>
         <input
@@ -87,6 +88,9 @@ function LoginScreen() {
         >
           {busy ? "Logging in..." : "Log in"}
         </button>
+        <a href="/" className="block text-center text-ink/40 text-xs mt-4">
+          ← Back to customer page
+        </a>
       </form>
     </div>
   );

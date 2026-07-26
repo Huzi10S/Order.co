@@ -94,13 +94,6 @@ export default function CustomerPage() {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
   }
 
-  function scrollToSection(section) {
-    setOpenSections((prev) => ({ ...prev, [section]: true }));
-    setTimeout(() => {
-      document.getElementById(`section-${section}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 50);
-  }
-
   const cartItems = Object.values(cart);
   const totalItems = cartItems.reduce((sum, c) => sum + c.qty, 0);
 
@@ -204,19 +197,6 @@ export default function CustomerPage() {
             className="w-full rounded-xl px-4 py-2.5 text-ink placeholder:text-ink/40 outline-none"
           />
         </div>
-        {!isSearching && sections.length > 0 && (
-          <div className="max-w-3xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
-            {sections.map(({ section }) => (
-              <button
-                key={section}
-                onClick={() => scrollToSection(section)}
-                className="whitespace-nowrap text-xs font-semibold bg-white/10 text-white rounded-full px-3 py-1.5 active:bg-white/20"
-              >
-                {section}
-              </button>
-            ))}
-          </div>
-        )}
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-4">

@@ -103,10 +103,14 @@ export default function CustomerPage() {
 
   async function placeOrder() {
     if (cartItems.length === 0) return;
+    if (!customerName.trim()) {
+      alert("Please enter your name so the shop knows who placed the order.");
+      return;
+    }
     setPlacing(true);
     try {
       await addDoc(collection(db, "orders"), {
-        customerName: customerName.trim() || "Not given",
+        customerName: customerName.trim(),
         customerPhone: customerPhone.trim() || "",
         status: "pending",
         createdAt: serverTimestamp(),
@@ -156,9 +160,17 @@ export default function CustomerPage() {
   return (
     <div className="min-h-screen bg-cloth pb-28">
       <header className="bg-navy text-white sticky top-0 z-20 shadow-card">
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          <h1 className="text-lg font-bold tracking-tight">Supreme Sanitary</h1>
-          <p className="text-white/60 text-sm">Select what you need, then send your order</p>
+        <div className="max-w-3xl mx-auto px-4 py-4 flex items-start justify-between">
+          <div>
+            <h1 className="text-lg font-bold tracking-tight">Supreme Sanitary</h1>
+            <p className="text-white/60 text-sm">Select what you need, then send your order</p>
+          </div>
+          <a
+            href="/uncle"
+            className="text-xs text-white/50 border border-white/20 rounded-full px-3 py-1.5 whitespace-nowrap mt-0.5"
+          >
+            Shop login
+          </a>
         </div>
         <div className="max-w-3xl mx-auto px-4 pb-3">
           <input
@@ -357,16 +369,20 @@ function CartDrawer({
           })}
 
           <div className="mt-4 space-y-2">
-            <input
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="Your name"
-              className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm"
-            />
+            <div>
+              <input
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Your name (required)"
+                required
+                className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm"
+              />
+            </div>
             <input
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
               placeholder="Phone number (optional)"
+              type="tel"
               className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm"
             />
           </div>
@@ -375,11 +391,14 @@ function CartDrawer({
         <div className="p-5 border-t border-ink/10">
           <button
             onClick={onPlaceOrder}
-            disabled={items.length === 0 || placing}
+            disabled={items.length === 0 || placing || !customerName.trim()}
             className="w-full bg-navy disabled:opacity-40 text-white rounded-xl py-3.5 font-bold active:scale-[0.98] transition"
           >
             {placing ? "Sending..." : "Place order"}
           </button>
+          {!customerName.trim() && (
+            <p className="text-xs text-rust text-center mt-2">Enter your name to place the order</p>
+          )}
         </div>
       </div>
     </div>

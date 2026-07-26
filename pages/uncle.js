@@ -39,8 +39,13 @@ export default function UnclePage() {
   return <Dashboard />;
 }
 
+const USER_MAP = {
+  "murtaza h": "murtaza.h@supremesanitary.internal",
+  "hamza h": "hamza.h@supremesanitary.internal",
+};
+
 function LoginScreen() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -49,10 +54,16 @@ function LoginScreen() {
     e.preventDefault();
     setBusy(true);
     setError("");
+    const email = USER_MAP[username.trim().toLowerCase()];
+    if (!email) {
+      setError("Unknown username.");
+      setBusy(false);
+      return;
+    }
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
-      setError("Could not log in. Check your email and password.");
+      setError("Incorrect password.");
     } finally {
       setBusy(false);
     }
@@ -65,11 +76,12 @@ function LoginScreen() {
         <h1 className="text-xl font-bold text-navy mb-1">Shop dashboard</h1>
         <p className="text-ink/50 text-sm mb-6">Log in to see orders and manage products</p>
         <input
-          type="email"
+          type="text"
           required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Username"
+          autoCapitalize="words"
           className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm mb-3"
         />
         <input

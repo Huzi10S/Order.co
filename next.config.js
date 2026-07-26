@@ -10,6 +10,15 @@ const nextConfig = {
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: (process.env.messagingSenderId || process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "").replace(/["',]/g, '').trim(),
     NEXT_PUBLIC_FIREBASE_APP_ID: (process.env.appId || process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "").replace(/["',]/g, '').trim(),
   },
+  async redirects() {
+    return [
+      {
+        source: '/uncle',
+        destination: '/shop',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

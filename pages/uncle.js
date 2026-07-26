@@ -142,10 +142,22 @@ function formatOrderForExcel(order) {
   return lines.join("\n");
 }
 
+function isToday(timestamp) {
+  if (!timestamp?.toDate) return false;
+  const d = timestamp.toDate();
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
 function OrdersTab() {
   const [orders, setOrders] = useState([]);
-  const [showHistory, setShowHistory] = useState(false);
+  const [view, setView] = useState("new"); // "new" | "later" | "history"
   const [copiedId, setCopiedId] = useState(null);
+  const [showSummary, setShowSummary] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
@@ -155,10 +167,20 @@ function OrdersTab() {
     return () => unsub();
   }, []);
 
-  const visible = orders.filter((o) => (showHistory ? o.status !== "pending" : o.status === "pending"));
+  const visible = orders.filter((o) => {
+    if (view === "new") return o.status === "pending";
+    if (view === "later") return o.status === "later";
+    return o.status === "fulfilled" || o.status === "cancelled";
+  });
 
-  async function markPrepared(id) {
-    await updateDoc(doc(db, "orders", id), { status: "prepared" });
+  const todaysOrders = orders.filter((o) => isToday(o.createdAt));
+  const todaysItemCount = todaysOrders.reduce(
+    (sum, o) => sum + o.items.reduce((s, it) => s + it.qty, 0),
+    0
+  );
+
+  async function setStatus(id, status) {
+    await updateDoc(doc(db, "orders", id), { status });
   }
 
   async function copyOrder(order) {
@@ -172,23 +194,37 @@ function OrdersTab() {
     }
   }
 
+  const viewLabels = { new: "New orders", later: "Kept for later", history: "Past orders" };
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-bold text-navy text-lg">
-          {showHistory ? "Past orders" : "New orders"}
-        </h2>
+      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+        <div className="flex gap-1 bg-white rounded-lg p-1 shadow-card">
+          {["new", "later", "history"].map((key) => (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              className={`px-3 py-1.5 rounded-md text-sm font-semibold transition ${
+                view === key ? "bg-navy text-white" : "text-ink/60"
+              }`}
+            >
+              {viewLabels[key]}
+            </button>
+          ))}
+        </div>
         <button
-          onClick={() => setShowHistory((v) => !v)}
-          className="text-sm font-semibold text-navy underline"
+          onClick={() => setShowSummary(true)}
+          className="text-sm font-semibold bg-rust text-white rounded-lg px-4 py-2"
         >
-          {showHistory ? "Show new orders" : "Show past orders"}
+          Today's summary
         </button>
       </div>
 
       {visible.length === 0 && (
         <p className="text-ink/50 text-center py-10">
-          {showHistory ? "No past orders yet." : "No new orders right now."}
+          {view === "new" && "No new orders right now."}
+          {view === "later" && "Nothing kept for later."}
+          {view === "history" && "No past orders yet."}
         </p>
       )}
 
@@ -202,11 +238,22 @@ function OrdersTab() {
                   <p className="text-xs text-ink/50">{order.customerPhone}</p>
                 )}
               </div>
-              <p className="text-xs text-ink/40">
-                {order.createdAt?.toDate
-                  ? order.createdAt.toDate().toLocaleString()
-                  : "Just now"}
-              </p>
+              <div className="text-right">
+                <p className="text-xs text-ink/40">
+                  {order.createdAt?.toDate
+                    ? order.createdAt.toDate().toLocaleString()
+                    : "Just now"}
+                </p>
+                {order.status && order.status !== "pending" && (
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    order.status === "fulfilled" ? "bg-leaf/10 text-leaf" :
+                    order.status === "cancelled" ? "bg-rust/10 text-rust" :
+                    "bg-navy/10 text-navy"
+                  }`}>
+                    {order.status === "later" ? "Later" : order.status === "fulfilled" ? "Fulfilled" : "Cancelled"}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="border-t border-ink/10 pt-2 mb-3">
@@ -218,24 +265,117 @@ function OrdersTab() {
               ))}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => copyOrder(order)}
-                className="flex-1 bg-cloth border border-ink/15 rounded-lg py-2 text-sm font-semibold text-navy"
+                className="flex-1 bg-cloth border border-ink/15 rounded-lg py-2 text-sm font-semibold text-navy min-w-[100px]"
               >
                 {copiedId === order.id ? "Copied ✓" : "Copy for Excel"}
               </button>
-              {order.status === "pending" && (
-                <button
-                  onClick={() => markPrepared(order.id)}
-                  className="flex-1 bg-leaf text-white rounded-lg py-2 text-sm font-semibold"
-                >
-                  Mark as prepared
-                </button>
+              {view === "new" && (
+                <>
+                  <button
+                    onClick={() => setStatus(order.id, "fulfilled")}
+                    className="flex-1 bg-leaf text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
+                  >
+                    Fulfill now
+                  </button>
+                  <button
+                    onClick={() => setStatus(order.id, "later")}
+                    className="flex-1 bg-navy text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
+                  >
+                    Keep for later
+                  </button>
+                  <button
+                    onClick={() => setStatus(order.id, "cancelled")}
+                    className="flex-1 bg-rust text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+              {view === "later" && (
+                <>
+                  <button
+                    onClick={() => setStatus(order.id, "fulfilled")}
+                    className="flex-1 bg-leaf text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
+                  >
+                    Fulfill now
+                  </button>
+                  <button
+                    onClick={() => setStatus(order.id, "cancelled")}
+                    className="flex-1 bg-rust text-white rounded-lg py-2 text-sm font-semibold min-w-[100px]"
+                  >
+                    Cancel
+                  </button>
+                </>
               )}
             </div>
           </div>
         ))}
+      </div>
+
+      {showSummary && (
+        <DailySummaryModal
+          orders={todaysOrders}
+          itemCount={todaysItemCount}
+          onClose={() => setShowSummary(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function DailySummaryModal({ orders, itemCount, onClose }) {
+  const fulfilled = orders.filter((o) => o.status === "fulfilled").length;
+  const cancelled = orders.filter((o) => o.status === "cancelled").length;
+  const pending = orders.filter((o) => o.status === "pending" || o.status === "later").length;
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end sm:items-center sm:justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col shadow-card">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-ink/10">
+          <h2 className="font-bold text-navy text-lg">Today's summary</h2>
+          <button onClick={onClose} className="text-ink/50 text-2xl leading-none px-2">×</button>
+        </div>
+
+        <div className="overflow-y-auto px-5 py-4 flex-1">
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-cloth rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-navy">{orders.length}</p>
+              <p className="text-xs text-ink/50">Orders today</p>
+            </div>
+            <div className="bg-cloth rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-navy">{itemCount}</p>
+              <p className="text-xs text-ink/50">Items ordered</p>
+            </div>
+            <div className="bg-leaf/10 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-leaf">{fulfilled}</p>
+              <p className="text-xs text-ink/50">Fulfilled</p>
+            </div>
+            <div className="bg-cloth rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-ink/70">{pending}</p>
+              <p className="text-xs text-ink/50">Still pending</p>
+            </div>
+          </div>
+
+          {orders.length === 0 && (
+            <p className="text-ink/50 text-center py-6">No orders yet today.</p>
+          )}
+
+          <div className="space-y-2">
+            {orders.map((o) => (
+              <div key={o.id} className="flex justify-between text-sm border-b border-ink/5 py-2">
+                <span className="font-medium text-ink">{o.customerName}</span>
+                <span className="text-ink/50">
+                  {o.items.reduce((s, it) => s + it.qty, 0)} items ·{" "}
+                  {o.status === "fulfilled" ? "Fulfilled" : o.status === "cancelled" ? "Cancelled" : o.status === "later" ? "Later" : "Pending"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

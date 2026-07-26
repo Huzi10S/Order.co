@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{}";
+self.__REACT_LOADABLE_MANIFEST='{"pages\\\\shop.js -> xlsx":{"id":4105,"files":["static/chunks/674a26a7.67bac366f42f6e0c.js","static/chunks/919.07c6b8536b715587.js"]}}';

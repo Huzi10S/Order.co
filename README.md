@@ -2,7 +2,7 @@
 
 Two pages:
 - `/` — customer catalog & ordering page (no login needed)
-- `/uncle` — shop owner dashboard (login needed): live incoming orders, "Copy for Excel", product management, price-visibility setting
+- `/shop` — shop owner dashboard (login needed): live incoming orders, "Copy for Excel", product management, price-visibility setting
 
 ## 1. Install dependencies
 
@@ -24,7 +24,7 @@ Open `.env.local` and paste in the values from:
 ## 3. Turn on Email/Password login for the shop owner
 
 **Firebase Console → Authentication → Sign-in method → enable "Email/Password"**
-Then **Authentication → Users → Add user** — create one login (email + password) for your uncle. That's what he'll use at `/uncle`.
+Then **Authentication → Users → Add user** — create one login (email + password) for your uncle. That's what he'll use at `/shop`.
 
 ## 4. Publish the security rules
 
@@ -49,7 +49,7 @@ This uses a separate admin key (different from the public config above) so it on
 ```
 npm run dev
 ```
-Visit `http://localhost:3000` for the customer page, and `http://localhost:3000/uncle` for the dashboard.
+Visit `http://localhost:3000` for the customer page, and `http://localhost:3000/shop` for the dashboard.
 
 ## 7. Deploy
 
@@ -57,6 +57,6 @@ Push this project to your existing git repo connected to Vercel. Then in **Verce
 
 ## Notes
 
-- Prices are optional. Turn them on for customers anytime from `/uncle` → Settings.
-- Adding a new product from `/uncle` → Products lets you also add size options (comma separated) so it shows the same dropdown-style selector as the imported products.
+- Prices are optional. Turn them on for customers anytime from `/shop` → Settings.
+- Adding a new product from `/shop` → Products lets you also add size options (comma separated) so it shows the same dropdown-style selector as the imported products.
 - "Copy for Excel" copies a tab-separated list of the order's items — pasting it into Excel will automatically place item name, quantity, and unit into their own columns.

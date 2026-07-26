@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     "./pages/**/*.{js,jsx}",
     "./components/**/*.{js,jsx}",
@@ -7,19 +8,28 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        cloth: "rgb(var(--color-bg) / <alpha-value>)",
+        ink: "rgb(var(--color-ink) / <alpha-value>)",
         navy: {
-          DEFAULT: "#0F1B3D",
-          light: "#2A3D63",
-          dark: "#121D33",
+          DEFAULT: "rgb(var(--color-navy) / <alpha-value>)",
+          light: "rgb(var(--color-navy-light) / <alpha-value>)",
+          dark: "rgb(var(--color-navy-dark) / <alpha-value>)",
         },
         rust: {
-          DEFAULT: "#E8622C",
-          dark: "#C64E1E",
-          light: "#F2895D",
+          DEFAULT: "rgb(var(--color-rust) / <alpha-value>)",
+          dark: "rgb(var(--color-rust-dark) / <alpha-value>)",
+          light: "rgb(var(--color-rust-light) / <alpha-value>)",
         },
-        cloth: "#F4F5F7",
-        ink: "#1F2937",
-        leaf: "#1F8A5F",
+        leaf: "rgb(var(--color-leaf) / <alpha-value>)",
+      },
+      backgroundColor: {
+        white: "rgb(var(--color-surface) / <alpha-value>)",
+      },
+      borderColor: {
+        white: "rgb(var(--color-surface) / <alpha-value>)",
+      },
+      textColor: {
+        white: "rgb(var(--color-text-white) / <alpha-value>)",
       },
       fontFamily: {
         sans: [

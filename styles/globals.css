@@ -2,9 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-bg: 244 245 247;
+  --color-surface: 255 255 255;
+  --color-ink: 31 41 55;
+  --color-navy: 15 27 61;
+  --color-navy-light: 42 61 99;
+  --color-navy-dark: 18 29 51;
+  --color-rust: 232 98 44;
+  --color-rust-dark: 198 78 30;
+  --color-rust-light: 242 137 93;
+  --color-leaf: 31 138 95;
+  --color-text-white: 255 255 255;
+}
+
+.dark {
+  --color-bg: 18 20 28;
+  --color-surface: 30 34 45;
+  --color-ink: 243 244 246;
+  --color-navy: 30 41 59;
+  --color-navy-light: 51 65 85;
+  --color-navy-dark: 15 23 42;
+  --color-rust: 232 98 44;
+  --color-rust-dark: 198 78 30;
+  --color-rust-light: 242 137 93;
+  --color-leaf: 46 160 113;
+  --color-text-white: 243 244 246;
+}
+
 html, body {
-  background-color: #F4F5F7;
-  color: #1F2937;
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--color-ink));
+}
+
+/* Button Global Styles */
+.btn {
+  @apply transition-all duration-150 ease-in-out font-semibold outline-none;
+}
+
+@media (hover: hover) {
+  .btn:hover {
+    filter: brightness(0.95);
+  }
+}
+
+.btn:active {
+  transform: scale(0.97);
+  filter: brightness(0.9);
+  transition: all 100ms ease-out;
+}
+
+/* Variants */
+.btn-primary {
+  @apply bg-navy text-white;
+}
+
+.btn-secondary {
+  @apply bg-cloth border border-ink/15 text-navy;
+}
+
+.btn-danger {
+  @apply bg-rust text-white;
+}
+
+.btn-success {
+  @apply bg-leaf text-white;
+}
+
+.btn-ghost {
+  @apply bg-transparent;
 }
 
 * {

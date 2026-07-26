@@ -1,0 +1,17 @@
+{
+  "name": "Supreme Sanitary",
+  "short_name": "Shop",
+  "description": "Order management dashboard for Supreme Sanitary",
+  "start_url": "/shop",
+  "display": "standalone",
+  "background_color": "#F4F5F7",
+  "theme_color": "#0F1B3D",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

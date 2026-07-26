@@ -165,7 +165,7 @@ export default function CustomerPage() {
           </p>
           <button
             onClick={() => setPlaced(false)}
-            className="w-full bg-navy text-white rounded-xl py-3 font-semibold active:scale-[0.98] transition"
+            className="btn btn-primary w-full rounded-xl py-3"
           >
             Place another order
           </button>
@@ -183,7 +183,7 @@ export default function CustomerPage() {
             <p className="text-white/60 text-sm">Select what you need, then send your order</p>
           </div>
           <a
-            href="/uncle"
+            href="/shop"
             className="text-xs text-white/50 border border-white/20 rounded-full px-3 py-1.5 whitespace-nowrap mt-0.5"
           >
             Shop login
@@ -216,7 +216,7 @@ export default function CustomerPage() {
                 </p>
                 <button
                   onClick={() => window.location.reload()}
-                  className="bg-navy text-white rounded-lg px-5 py-2 text-sm font-semibold"
+                  className="btn btn-primary rounded-lg px-5 py-2 text-sm"
                 >
                   Retry
                 </button>
@@ -239,7 +239,7 @@ export default function CustomerPage() {
             <section key={section} id={`section-${section}`} className="mb-3 scroll-mt-32">
               <button
                 onClick={() => toggleSection(section)}
-                className="w-full flex items-center justify-between bg-white rounded-xl border border-ink/10 px-4 py-4 mb-2 active:bg-cloth/50 transition"
+                className="btn w-full flex items-center justify-between bg-white rounded-xl border border-ink/10 px-4 py-4 mb-2"
               >
                 <span className="text-navy font-semibold text-base flex items-center gap-2">
                   {section} <span className="bg-ink/5 text-ink/60 text-xs py-0.5 px-2 rounded-full">{items.length}</span>
@@ -273,7 +273,7 @@ export default function CustomerPage() {
           <div className="max-w-3xl mx-auto px-4 pb-4">
             <button
               onClick={() => setCartOpen(true)}
-              className="w-full bg-rust text-white rounded-xl py-4 font-semibold flex items-center justify-between px-6 active:scale-[0.98] transition"
+              className="btn btn-danger w-full rounded-xl py-4 flex items-center justify-between px-6"
             >
               <span>{totalItems} item{totalItems > 1 ? "s" : ""} selected</span>
               <span>View order →</span>
@@ -341,7 +341,7 @@ function ProductCard({ product, showPrice, cart, onChange }) {
         <div className="flex items-center border border-ink/15 rounded-lg overflow-hidden h-10">
           <button
             onClick={() => setQty(Math.max(0, qty - 1))}
-            className="w-10 h-full text-lg font-medium text-navy active:bg-cloth/50 transition bg-cloth/30"
+            className="btn w-10 h-full text-lg text-navy bg-cloth/30"
           >
             −
           </button>
@@ -355,7 +355,7 @@ function ProductCard({ product, showPrice, cart, onChange }) {
           />
           <button
             onClick={() => setQty(qty + 1)}
-            className="w-10 h-full text-lg font-medium text-navy active:bg-cloth/50 transition bg-cloth/30"
+            className="btn w-10 h-full text-lg text-navy bg-cloth/30"
           >
             +
           </button>
@@ -380,7 +380,7 @@ function CartDrawer({
       <div className="relative bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-xl max-h-[85vh] flex flex-col border border-ink/10">
         <div className="flex items-center justify-between px-5 py-4 border-b border-ink/10">
           <h2 className="font-bold text-navy text-lg">Your order</h2>
-          <button onClick={onClose} className="text-ink/50 text-2xl leading-none px-2">×</button>
+          <button onClick={onClose} className="btn btn-ghost text-ink/50 text-2xl leading-none px-2">×</button>
         </div>
 
         <div className="overflow-y-auto px-5 py-3 flex-1">
@@ -398,7 +398,7 @@ function CartDrawer({
                     {showPrice && c.product.price ? ` · ₹${c.product.price * c.qty}` : ""}
                   </p>
                 </div>
-                <button onClick={() => onRemove(key)} className="text-rust text-sm font-medium px-2">
+                <button onClick={() => onRemove(key)} className="btn btn-ghost text-rust text-sm px-2">
                   Remove
                 </button>
               </div>
@@ -430,7 +430,7 @@ function CartDrawer({
           <button
             onClick={onPlaceOrder}
             disabled={items.length === 0 || placing || !customerName.trim()}
-            className="w-full bg-navy disabled:opacity-40 text-white rounded-xl py-3.5 font-semibold active:scale-[0.98] transition"
+            className="btn btn-primary w-full disabled:opacity-40 rounded-xl py-3.5"
           >
             {placing ? "Sending..." : "Place order"}
           </button>

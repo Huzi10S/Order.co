@@ -9,6 +9,8 @@ module.exports = {
     extend: {
       colors: {
         cloth: "rgb(var(--color-bg) / <alpha-value>)",
+        bg: "rgb(var(--color-bg) / <alpha-value>)",
+        surface: "rgb(var(--color-surface) / <alpha-value>)",
         ink: "rgb(var(--color-ink) / <alpha-value>)",
         navy: {
           DEFAULT: "rgb(var(--color-navy) / <alpha-value>)",

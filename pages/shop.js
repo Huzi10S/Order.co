@@ -156,8 +156,7 @@ function Dashboard() {
   }
 
   return (
-    <div className={darkMode ? "dark" : ""}>
-      <div className="min-h-screen bg-cloth">
+    <div className={darkMode ? "dark text-ink bg-cloth min-h-screen" : "text-ink bg-cloth min-h-screen"}>
       <header className="bg-navy dark:bg-surface text-white sticky top-0 z-20 border-b border-white/10 dark:border-ink/10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="font-bold text-lg">Shop dashboard</h1>
@@ -189,7 +188,6 @@ function Dashboard() {
         {tab === "products" && <ProductsTab products={products} connError={prodConnError} />}
         {tab === "settings" && <SettingsTab darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}
       </main>
-    </div>
     </div>
   );
 }

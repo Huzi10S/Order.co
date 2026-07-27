@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   collection,
   onSnapshot,
@@ -11,6 +11,7 @@ import { db } from "../lib/firebase";
 import { PRODUCT_SECTIONS } from "../lib/constants";
 import { useProducts } from "../lib/useProducts";
 import { useSettings } from "../lib/useSettings";
+import { CategorySkeleton } from "../components/Skeleton";
 
 function cartKey(productId, variant) {
   return variant ? `${productId}::${variant}` : productId;
@@ -28,6 +29,8 @@ export default function CustomerPage() {
   const [search, setSearch] = useState("");
   const [openSections, setOpenSections] = useState({});
   const [loadSlow, setLoadSlow] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
+  const lastOrderTime = useRef(0);
 
   useEffect(() => {
     if (loading) {
@@ -94,22 +97,37 @@ export default function CustomerPage() {
       alert("Please enter your name so the shop knows who placed the order.");
       return;
     }
+    // Honeypot: if the hidden field is filled, silently "succeed" without writing
+    if (honeypot) {
+      setPlaced(true);
+      setCart({});
+      return;
+    }
+    // Cooldown: 30 seconds between orders
+    const now = Date.now();
+    const elapsed = now - lastOrderTime.current;
+    if (elapsed < 30000) {
+      const wait = Math.ceil((30000 - elapsed) / 1000);
+      alert(`Please wait ${wait} seconds before placing another order.`);
+      return;
+    }
     setPlacing(true);
     try {
       await addDoc(collection(db, "orders"), {
-        customerName: customerName.trim(),
-        customerPhone: customerPhone.trim() || "",
+        customerName: customerName.trim().slice(0, 100),
+        customerPhone: customerPhone.trim().slice(0, 20) || "",
         status: "pending",
         createdAt: serverTimestamp(),
-        items: cartItems.map((c) => ({
+        items: cartItems.slice(0, 50).map((c) => ({
           productId: c.product.id,
           name: c.product.name,
           variant: c.variant || null,
           unit: c.product.unit || "pcs",
-          qty: c.qty,
+          qty: Math.max(1, Math.min(Number(c.qty) || 1, 99999)),
           price: c.product.price || null,
         })),
       });
+      lastOrderTime.current = Date.now();
       setPlaced(true);
       setCart({});
     } catch (e) {
@@ -177,10 +195,12 @@ export default function CustomerPage() {
         )}
 
         {loading && (
-          <div className="text-center py-10">
-            <p className="text-ink/50 mb-2">Loading products...</p>
+          <div className="space-y-3">
+            <CategorySkeleton />
+            <CategorySkeleton />
+            <CategorySkeleton />
             {loadSlow && (
-              <div className="mt-3">
+              <div className="mt-3 text-center">
                 <p className="text-ink/40 text-sm mb-3">
                   Taking longer than usual. Check your internet connection.
                 </p>
@@ -260,6 +280,8 @@ export default function CustomerPage() {
           customerPhone={customerPhone}
           setCustomerName={setCustomerName}
           setCustomerPhone={setCustomerPhone}
+          honeypot={honeypot}
+          setHoneypot={setHoneypot}
           onRemove={removeFromCart}
           onClose={() => setCartOpen(false)}
           onPlaceOrder={placeOrder}
@@ -291,7 +313,7 @@ function ProductCard({ product, showPrice, cart, onChange }) {
         <p className="font-semibold text-ink leading-snug">{product.name}</p>
         <p className="text-xs text-ink/50 mt-0.5">
           {product.unit}
-          {showPrice && product.price ? ` · ₹${product.price}` : ""}
+          {showPrice && product.price ? ` · ₹${Number(product.price).toLocaleString('en-IN')}` : ""}
         </p>
       </div>
 
@@ -342,7 +364,8 @@ function ProductCard({ product, showPrice, cart, onChange }) {
 
 function CartDrawer({
   items, showPrice, customerName, customerPhone,
-  setCustomerName, setCustomerPhone, onRemove, onClose, onPlaceOrder, placing,
+  setCustomerName, setCustomerPhone, honeypot, setHoneypot,
+  onRemove, onClose, onPlaceOrder, placing,
 }) {
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center sm:justify-center">
@@ -365,7 +388,7 @@ function CartDrawer({
                   </p>
                   <p className="text-xs text-ink/50">
                     {c.qty} {c.product.unit}
-                    {showPrice && c.product.price ? ` · ₹${c.product.price * c.qty}` : ""}
+                    {showPrice && c.product.price ? ` · ₹${Number(c.product.price * c.qty).toLocaleString('en-IN')}` : ""}
                   </p>
                 </div>
                 <button onClick={() => onRemove(key)} className="btn btn-ghost text-rust text-sm px-2">
@@ -382,6 +405,7 @@ function CartDrawer({
                 onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="Your name (required)"
                 required
+                maxLength={100}
                 className="w-full border border-ink/15 rounded-lg px-4 py-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
               />
             </div>
@@ -391,7 +415,17 @@ function CartDrawer({
               placeholder="Phone number (optional)"
               type="tel"
               inputMode="tel"
+              maxLength={20}
               className="w-full border border-ink/15 rounded-lg px-4 py-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
+            />
+            {/* Honeypot field — hidden from real users, filled by bots */}
+            <input
+              value={honeypot}
+              onChange={(e) => setHoneypot(e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, height: 0 }}
             />
           </div>
         </div>

@@ -13,8 +13,11 @@ import {
   addDoc,
   setDoc,
   getDoc,
+  getDocs,
+  limit,
   orderBy,
   query,
+  writeBatch,
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { PRODUCT_SECTIONS } from "../lib/constants";
@@ -85,14 +88,14 @@ function LoginScreen() {
     setError("");
     const email = USER_MAP[username.trim().toLowerCase()];
     if (!email) {
-      setError("Unknown username.");
+      setError("Invalid credentials.");
       setBusy(false);
       return;
     }
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
-      setError("Incorrect password.");
+      setError("Invalid credentials.");
     } finally {
       setBusy(false);
     }
@@ -1017,10 +1020,70 @@ function ProductsTab({ products, connError }) {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [undoState, setUndoState] = useState(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "settings", "lastBulkUpdate"), (snap) => {
+      if (snap.exists()) {
+        setUndoState(snap.data());
+      } else {
+        setUndoState(null);
+      }
+    });
+    return unsub;
+  }, []);
 
   const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(search.trim().toLowerCase())
   );
+
+  function toggleSelection(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (selectedIds.size === filtered.length && filtered.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(p => p.id)));
+    }
+  }
+
+  async function handleUndoBulk() {
+    if (!undoState || !undoState.changes) return;
+    if (!confirm("Are you sure you want to undo the last bulk price update?")) return;
+    
+    try {
+      const batch = writeBatch(db);
+      let count = 0;
+      for (const [id, oldPrice] of Object.entries(undoState.changes)) {
+        batch.update(doc(db, "products", id), { price: oldPrice });
+        count++;
+      }
+      batch.delete(doc(db, "settings", "lastBulkUpdate"));
+      
+      batch.set(doc(collection(db, "priceUpdateLog")), {
+        timestamp: new Date().toISOString(),
+        scope: "Undo",
+        mode: "revert",
+        value: 0,
+        count: count
+      });
+      
+      await batch.commit();
+    } catch(e) {
+      alert("Undo failed.");
+      console.error(e);
+    }
+  }
 
   async function saveProduct(p) {
     try {
@@ -1061,19 +1124,55 @@ function ProductsTab({ products, connError }) {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-4 gap-3">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search products..."
-          className="flex-1 border border-ink/15 rounded-lg px-4 py-3 bg-white dark:bg-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
-        />
-        <button
-          onClick={() => setAdding(true)}
-          className="btn btn-danger rounded-lg px-4 py-3 text-sm font-semibold whitespace-nowrap"
-        >
-          + Add product
-        </button>
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search products..."
+            className="flex-1 border border-ink/15 rounded-lg px-4 py-3 bg-white dark:bg-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
+          />
+          <button
+            onClick={() => setAdding(true)}
+            className="btn btn-danger rounded-lg px-4 py-3 text-sm font-semibold whitespace-nowrap"
+          >
+            + Add product
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-ink">
+            <input 
+              type="checkbox" 
+              checked={filtered.length > 0 && selectedIds.size === filtered.length}
+              onChange={toggleAll}
+              className="w-4 h-4 rounded border-ink/20 text-navy focus:ring-navy"
+            />
+            Select all
+          </label>
+          <div className="flex items-center gap-2">
+            {undoState && (
+              <button 
+                onClick={handleUndoBulk}
+                className="btn bg-rust/10 text-rust hover:bg-rust/20 rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+              >
+                Undo Last Bulk Update
+              </button>
+            )}
+            <button 
+              onClick={() => setHistoryModalOpen(true)}
+              className="btn border border-ink/15 text-ink/70 hover:bg-ink/5 dark:hover:bg-ink/10 rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+            >
+              History
+            </button>
+            <button 
+              onClick={() => setBulkModalOpen(true)}
+              className="btn border border-ink/15 text-ink hover:bg-ink/5 dark:hover:bg-ink/10 rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+            >
+              Bulk update prices {selectedIds.size > 0 ? `(${selectedIds.size})` : ""}
+            </button>
+          </div>
+        </div>
       </div>
 
       {adding && (
@@ -1094,13 +1193,21 @@ function ProductsTab({ products, connError }) {
             />
           ) : (
             <div key={p.id} className="bg-white rounded-xl border border-ink/10 p-4 flex items-center justify-between">
-              <div>
-                <p className="font-medium text-ink text-sm">{p.name}</p>
-                <p className="text-xs text-ink/50">
-                  {p.section} · {p.unit}
-                  {p.price ? ` · ₹${p.price}` : ""}
-                  {p.variants?.length ? ` · ${p.variants.length} sizes` : ""}
-                </p>
+              <div className="flex items-center gap-3">
+                <input 
+                  type="checkbox"
+                  checked={selectedIds.has(p.id)}
+                  onChange={() => toggleSelection(p.id)}
+                  className="w-4 h-4 rounded border-ink/20 text-navy focus:ring-navy"
+                />
+                <div>
+                  <p className="font-medium text-ink text-sm">{p.name}</p>
+                  <p className="text-xs text-ink/50">
+                    {p.section} · {p.unit}
+                    {p.price ? ` · ₹${Number(p.price).toLocaleString('en-IN')}` : ""}
+                    {p.variants?.length ? ` · ${p.variants.length} sizes` : ""}
+                  </p>
+                </div>
               </div>
               <div className="flex gap-3 text-sm font-semibold">
                 <button onClick={() => setEditing(p.id)} className="btn btn-ghost text-navy">Edit</button>
@@ -1110,6 +1217,21 @@ function ProductsTab({ products, connError }) {
           )
         )}
       </div>
+
+      {bulkModalOpen && (
+        <BulkUpdateModal 
+          onClose={() => setBulkModalOpen(false)}
+          products={products}
+          selectedIds={selectedIds}
+          clearSelection={() => setSelectedIds(new Set())}
+        />
+      )}
+      
+      {historyModalOpen && (
+        <PriceUpdateHistoryModal 
+          onClose={() => setHistoryModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -1280,6 +1402,295 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
               }`}
             />
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BulkUpdateModal({ onClose, products, selectedIds, clearSelection }) {
+  const [mode, setMode] = useState("percentage");
+  const [scope, setScope] = useState("all");
+  const [category, setCategory] = useState(PRODUCT_SECTIONS[0]);
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+
+  useEffect(() => {
+    if (selectedIds.size > 0) {
+      setScope("selected");
+    }
+  }, [selectedIds]);
+
+  function generatePreview(e) {
+    e.preventDefault();
+    const val = Number(value);
+    if (!val || isNaN(val)) {
+      alert("Please enter a valid number.");
+      return;
+    }
+
+    let targets = [];
+    if (scope === "all") {
+      targets = products;
+    } else if (scope === "category") {
+      targets = products.filter(p => p.section === category);
+    } else if (scope === "selected") {
+      if (selectedIds.size === 0) {
+        alert("No products selected.");
+        return;
+      }
+      targets = products.filter(p => selectedIds.has(p.id));
+    }
+
+    const preview = [];
+    targets.forEach(p => {
+      const oldPrice = p.price ? Number(p.price) : 0;
+      let newPrice;
+      if (mode === "percentage") {
+        newPrice = Math.round(oldPrice * (1 + val / 100));
+      } else {
+        newPrice = oldPrice + val;
+      }
+      preview.push({
+        product: p,
+        oldPrice,
+        newPrice,
+        skipped: newPrice < 0
+      });
+    });
+
+    setPreviewData(preview);
+  }
+
+  async function confirmBulkUpdate() {
+    if (!previewData) return;
+    
+    const validUpdates = previewData.filter(item => !item.skipped && item.oldPrice !== item.newPrice);
+    if (validUpdates.length === 0) {
+      alert("No valid price changes to apply.");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to update ${validUpdates.length} products?`)) return;
+
+    setBusy(true);
+    try {
+      const batch = writeBatch(db);
+      const changes = {};
+      
+      validUpdates.forEach(item => {
+        batch.update(doc(db, "products", item.product.id), { price: item.newPrice });
+        changes[item.product.id] = item.oldPrice;
+      });
+
+      batch.set(doc(db, "settings", "lastBulkUpdate"), {
+        timestamp: new Date().toISOString(),
+        scope,
+        mode,
+        value: Number(value),
+        changes
+      });
+
+      batch.set(doc(collection(db, "priceUpdateLog")), {
+        timestamp: new Date().toISOString(),
+        scope: scope === "category" ? category : scope,
+        mode,
+        value: Number(value),
+        count: validUpdates.length
+      });
+
+      await batch.commit();
+      
+      if (scope === "selected") clearSelection();
+      onClose();
+    } catch (e) {
+      alert("Could not update prices.");
+      console.error(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const validCount = previewData ? previewData.filter(p => !p.skipped && p.oldPrice !== p.newPrice).length : 0;
+  const skippedCount = previewData ? previewData.filter(p => p.skipped).length : 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative bg-white dark:bg-surface w-full max-w-2xl rounded-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-5 border-b border-ink/10">
+          <h2 className="font-bold text-navy dark:text-white text-lg">Bulk Update Prices</h2>
+          <button onClick={onClose} className="text-ink/50 hover:text-ink text-xl leading-none px-2 py-1">&times;</button>
+        </div>
+
+        <div className="overflow-y-auto p-5">
+          {!previewData ? (
+            <form onSubmit={generatePreview} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1 text-ink">Update Scope</label>
+                <select 
+                  value={scope} 
+                  onChange={e => setScope(e.target.value)}
+                  className="w-full border border-ink/15 rounded-lg px-4 py-2.5 bg-white dark:bg-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
+                >
+                  <option value="all">All Products</option>
+                  <option value="category">Specific Category</option>
+                  <option value="selected" disabled={selectedIds.size === 0}>Selected Products ({selectedIds.size})</option>
+                </select>
+              </div>
+
+              {scope === "category" && (
+                <div>
+                  <label className="block text-sm font-semibold mb-1 text-ink">Category</label>
+                  <select 
+                    value={category} 
+                    onChange={e => setCategory(e.target.value)}
+                    className="w-full border border-ink/15 rounded-lg px-4 py-2.5 bg-white dark:bg-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
+                  >
+                    {PRODUCT_SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold mb-1 text-ink">Adjustment Mode</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" checked={mode === "percentage"} onChange={() => setMode("percentage")} className="text-navy focus:ring-navy" />
+                    Percentage (%)
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" checked={mode === "fixed"} onChange={() => setMode("fixed")} className="text-navy focus:ring-navy" />
+                    Fixed Amount (₹)
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-1 text-ink">Value (use - for decrease)</label>
+                <input 
+                  type="number" 
+                  step="any"
+                  value={value}
+                  onChange={e => setValue(e.target.value)}
+                  placeholder={mode === "percentage" ? "e.g. 10 or -5" : "e.g. 50 or -20"}
+                  required
+                  className="w-full border border-ink/15 rounded-lg px-4 py-2.5 bg-white dark:bg-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button type="submit" className="btn btn-primary w-full py-3 rounded-xl font-semibold">
+                  Generate Preview
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center bg-cloth dark:bg-ink/5 p-3 rounded-lg border border-ink/10">
+                <div>
+                  <p className="font-semibold text-ink text-sm">Preview: {mode === "percentage" ? `${value}%` : `₹${value}`} to {scope === "category" ? category : scope}</p>
+                  <p className="text-xs text-ink/70 mt-1">
+                    {validCount} items to update. {skippedCount > 0 ? <span className="text-rust">{skippedCount} skipped (would go below ₹0).</span> : ""}
+                  </p>
+                </div>
+                <button onClick={() => setPreviewData(null)} className="btn btn-ghost text-sm text-navy dark:text-accent font-semibold px-3 py-1">Edit settings</button>
+              </div>
+
+              <div className="border border-ink/10 rounded-lg overflow-hidden max-h-[40vh] overflow-y-auto">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-cloth dark:bg-ink/5 border-b border-ink/10 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-2 font-semibold">Product</th>
+                      <th className="px-4 py-2 font-semibold text-right">Old Price</th>
+                      <th className="px-4 py-2 font-semibold text-right">New Price</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-ink/5">
+                    {previewData.map((item, idx) => (
+                      <tr key={idx} className={item.skipped ? "opacity-50" : ""}>
+                        <td className="px-4 py-2 text-ink truncate max-w-[200px]">{item.product.name}</td>
+                        <td className="px-4 py-2 text-right text-ink/60">₹{item.oldPrice}</td>
+                        <td className={`px-4 py-2 text-right font-medium ${item.skipped ? "text-rust" : item.oldPrice === item.newPrice ? "text-ink/40" : "text-leaf"}`}>
+                          ₹{item.newPrice} {item.skipped && "(Skipped)"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={confirmBulkUpdate} 
+                  disabled={validCount === 0 || busy}
+                  className="btn btn-primary flex-1 py-3 rounded-xl font-semibold disabled:opacity-50"
+                >
+                  {busy ? "Applying..." : `Confirm and Update ${validCount} Items`}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PriceUpdateHistoryModal({ onClose }) {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getDocs(query(collection(db, "priceUpdateLog"), orderBy("timestamp", "desc"), limit(50)))
+      .then(snap => {
+        setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      })
+      .catch(e => {
+        console.error(e);
+        setLoading(false);
+      });
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative bg-white dark:bg-surface w-full max-w-lg rounded-2xl flex flex-col max-h-[80vh]">
+        <div className="flex items-center justify-between p-5 border-b border-ink/10">
+          <h2 className="font-bold text-navy dark:text-white text-lg">Bulk Update History</h2>
+          <button onClick={onClose} className="text-ink/50 hover:text-ink text-xl leading-none px-2 py-1">&times;</button>
+        </div>
+        <div className="overflow-y-auto p-5">
+          {loading ? (
+            <p className="text-center text-ink/50 py-4">Loading history...</p>
+          ) : logs.length === 0 ? (
+            <p className="text-center text-ink/50 py-4">No bulk updates found.</p>
+          ) : (
+            <div className="space-y-3">
+              {logs.map(log => {
+                const date = log.timestamp ? new Date(log.timestamp).toLocaleString() : "Unknown date";
+                let actionText = "";
+                if (log.mode === "revert") {
+                  actionText = "Undid bulk update";
+                } else {
+                  const valStr = log.value > 0 ? `+${log.value}` : log.value;
+                  const unit = log.mode === "percentage" ? "%" : "₹";
+                  actionText = `${log.mode === "percentage" ? valStr + "%" : "₹" + valStr} to ${log.scope}`;
+                }
+                return (
+                  <div key={log.id} className="p-3 border border-ink/10 rounded-lg bg-cloth dark:bg-ink/5">
+                    <p className="font-semibold text-sm text-ink">{actionText}</p>
+                    <div className="flex justify-between items-center mt-1">
+                      <p className="text-xs text-ink/50">{date}</p>
+                      <p className="text-xs font-medium text-navy dark:text-accent bg-navy/5 dark:bg-accent/10 px-2 py-0.5 rounded-full">{log.count} items</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

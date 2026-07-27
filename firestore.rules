@@ -2,25 +2,67 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Anyone can view the product catalog (customers browsing).
-    // Only the logged-in shop owner can add, edit, or delete products.
+    // Helper: is the request from one of the two shop owner accounts?
+    function isShopOwner() {
+      return request.auth != null
+        && (request.auth.token.email == "murtaza.h@shop.com"
+            || request.auth.token.email == "hamza.h@shop.com");
+    }
+
+    // ─── Products ───
+    // Anyone can browse the catalog. Only shop owners can add/edit/delete.
     match /products/{productId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isShopOwner();
     }
 
-    // Anyone can place an order (create), but only the logged-in
-    // shop owner can view, update, or delete orders.
+    // ─── Orders ───
+    // Anyone can CREATE an order (customer placing an order).
+    // Only shop owners can read, update, or delete orders.
     match /orders/{orderId} {
-      allow create: if true;
-      allow read, update, delete: if request.auth != null;
+      allow read, update, delete: if isShopOwner();
+
+      allow create: if true
+        // Must have a non-empty customer name (string, max 100 chars)
+        && request.resource.data.customerName is string
+        && request.resource.data.customerName.size() >= 1
+        && request.resource.data.customerName.size() <= 100
+
+        // Phone is optional but must be a string if present, max 20 chars
+        && request.resource.data.customerPhone is string
+        && request.resource.data.customerPhone.size() <= 20
+
+        // Status must be "pending" on creation — customers can't set it to anything else
+        && request.resource.data.status == "pending"
+
+        // Items must be a non-empty list with at most 50 items
+        && request.resource.data.items is list
+        && request.resource.data.items.size() >= 1
+        && request.resource.data.items.size() <= 50
+
+        // createdAt must be the server timestamp
+        && request.resource.data.createdAt == request.time;
     }
 
-    // Settings (like whether to show prices) - readable by everyone,
-    // only editable by the logged-in shop owner.
+    // ─── Settings ───
+    // Readable by everyone (customer page reads showPriceToCustomer).
+    // Only shop owners can edit.
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isShopOwner();
+    }
+
+    // ─── Logs ───
+    match /priceUpdateLog/{logId} {
+      allow read, write: if isShopOwner();
+    }
+
+    // ─── Catch-all deny ───
+    // Any collection not explicitly matched above is denied by default.
+    // This is Firestore's default behavior, but making it explicit
+    // prevents accidentally leaving a new collection open.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

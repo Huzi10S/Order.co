@@ -170,7 +170,7 @@ function Dashboard() {
       <header className="bg-navy dark:bg-surface text-white sticky top-0 z-20 border-b border-white/10 dark:border-ink/10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="font-bold text-lg">Shop dashboard</h1>
-          <button onClick={() => signOut(auth)} className="btn btn-ghost text-white/70 dark:text-ink/70 text-sm hover:text-white">Log out</button>
+          <button onClick={() => signOut(auth)} className="text-sm font-medium text-white/70 dark:text-ink/70 border border-white/20 dark:border-ink/20 hover:text-white dark:hover:text-ink hover:bg-white/10 dark:hover:bg-ink/5 transition rounded-lg px-3 py-1.5">Log out</button>
         </div>
         <div className="max-w-4xl mx-auto px-4 flex gap-1 pb-2">
           {[

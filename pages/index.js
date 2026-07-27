@@ -9,7 +9,6 @@ import {
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { COLLECTIONS } from "../lib/collections";
-import { PRODUCT_SECTIONS } from "../lib/constants";
 import { useProducts } from "../lib/useProducts";
 import { useSettings } from "../lib/useSettings";
 import { CategorySkeleton } from "../components/Skeleton";
@@ -20,7 +19,7 @@ function cartKey(productId, variant) {
 
 export default function CustomerPage() {
   const { products, loading, error: connError } = useProducts();
-  const { showPrice, settings } = useSettings();
+  const { showPrice, settings, categories } = useSettings();
   const [cart, setCart] = useState({}); // key -> { product, variant, qty }
   const [cartOpen, setCartOpen] = useState(false);
   const [placing, setPlacing] = useState(false);
@@ -55,12 +54,12 @@ export default function CustomerPage() {
     }
     const order = q
       ? Object.keys(bySection)
-      : PRODUCT_SECTIONS.filter((s) => bySection[s]);
+      : categories.filter((s) => bySection[s]);
     for (const s of Object.keys(bySection)) {
       if (!order.includes(s)) order.push(s);
     }
     return order.map((s) => ({ section: s, items: bySection[s] }));
-  }, [products, search]);
+  }, [products, search, categories]);
 
   const isSearching = search.trim().length > 0;
 

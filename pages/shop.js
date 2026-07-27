@@ -21,9 +21,9 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { COLLECTIONS } from "../lib/collections";
-import { PRODUCT_SECTIONS } from "../lib/constants";
-import { useProducts } from "../lib/useProducts";
 import { useSettings } from "../lib/useSettings";
+import MoveToCategoryModal from "../components/MoveToCategoryModal";
+import CategoryManagerModal from "../components/CategoryManagerModal";
 
 
 /* ─── Clipboard helper with fallback for older browsers / Android WebViews ─── */
@@ -1044,6 +1044,7 @@ function DailySummaryModal({ orders, onClose }) {
 }
 
 function ProductsTab({ products, connError }) {
+  const { categories } = useSettings();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [editing, setEditing] = useState(null);
@@ -1051,6 +1052,8 @@ function ProductsTab({ products, connError }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+  const [moveToCategoryOpen, setMoveToCategoryOpen] = useState(false);
   const [undoState, setUndoState] = useState(null);
 
   useEffect(() => {
@@ -1156,7 +1159,7 @@ function ProductsTab({ products, connError }) {
 
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex gap-2 overflow-x-auto pb-1 snap-x hide-scrollbar">
-          {["All", ...PRODUCT_SECTIONS].map((cat) => {
+          {["All", ...categories].map((cat) => {
             const count = cat === "All" ? products.length : products.filter(p => p.section === cat).length;
             return (
               <button
@@ -1208,9 +1211,25 @@ function ProductsTab({ products, connError }) {
                 Undo Last Bulk Update
               </button>
             )}
+            {selectedIds.size > 0 && (
+              <button 
+                onClick={() => setMoveToCategoryOpen(true)}
+                className="btn border-navy/20 text-navy hover:bg-navy hover:text-white px-3 py-1.5 text-xs font-semibold whitespace-nowrap"
+              >
+                Move to category ({selectedIds.size})
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2 items-center">
+            <button 
+              onClick={() => setCategoryManagerOpen(true)}
+              className="btn border-navy/20 text-navy dark:border-accent dark:text-accent hover:bg-navy hover:text-white dark:hover:bg-accent dark:hover:text-bg px-4 py-2 text-sm font-semibold whitespace-nowrap transition"
+            >
+              Manage categories
+            </button>
             <button 
               onClick={() => setHistoryModalOpen(true)}
-              className="btn border border-ink/15 text-ink/70 hover:bg-ink/5 dark:hover:bg-ink/10 rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+              className="btn border-navy/20 text-navy dark:border-accent dark:text-accent hover:bg-navy hover:text-white dark:hover:bg-accent dark:hover:text-bg px-4 py-2 text-sm font-semibold whitespace-nowrap transition"
             >
               History
             </button>
@@ -1226,6 +1245,7 @@ function ProductsTab({ products, connError }) {
 
       {adding && (
         <ProductForm
+          categories={categories}
           onCancel={() => setAdding(false)}
           onSave={createProduct}
         />
@@ -1237,6 +1257,7 @@ function ProductsTab({ products, connError }) {
             <ProductForm
               key={p.id}
               product={p}
+              categories={categories}
               onCancel={() => setEditing(null)}
               onSave={saveProduct}
             />
@@ -1273,6 +1294,7 @@ function ProductsTab({ products, connError }) {
           products={products}
           selectedIds={selectedIds}
           clearSelection={() => setSelectedIds(new Set())}
+          categories={categories}
         />
       )}
       
@@ -1281,13 +1303,31 @@ function ProductsTab({ products, connError }) {
           onClose={() => setHistoryModalOpen(false)}
         />
       )}
+      
+      {categoryManagerOpen && (
+        <CategoryManagerModal 
+          onClose={() => setCategoryManagerOpen(false)}
+          categories={categories}
+          products={products}
+        />
+      )}
+
+      {moveToCategoryOpen && (
+        <MoveToCategoryModal 
+          onClose={() => setMoveToCategoryOpen(false)}
+          products={products}
+          selectedIds={selectedIds}
+          clearSelection={() => setSelectedIds(new Set())}
+          categories={categories}
+        />
+      )}
     </div>
   );
 }
 
-function ProductForm({ product, onCancel, onSave }) {
+function ProductForm({ product, onCancel, onSave, categories }) {
   const [name, setName] = useState(product?.name || "");
-  const [section, setSection] = useState(product?.section || PRODUCT_SECTIONS[0]);
+  const [section, setSection] = useState(product?.section || categories[0] || "Uncategorized");
   const [unit, setUnit] = useState(product?.unit || "pcs");
   const [price, setPrice] = useState(product?.price || "");
   const [variants, setVariants] = useState((product?.variants || []).join(", "));
@@ -1321,7 +1361,7 @@ function ProductForm({ product, onCancel, onSave }) {
         onChange={(e) => setSection(e.target.value)}
         className="w-full border border-ink/15 rounded-lg px-4 py-3 bg-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
       >
-        {PRODUCT_SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+        {categories.map((s) => <option key={s} value={s}>{s}</option>)}
       </select>
       <div className="flex gap-2">
         <input
@@ -1633,10 +1673,10 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
   );
 }
 
-function BulkUpdateModal({ onClose, products, selectedIds, clearSelection }) {
+function BulkUpdateModal({ onClose, products, selectedIds, clearSelection, categories }) {
   const [mode, setMode] = useState("percentage");
   const [scope, setScope] = useState("all");
-  const [category, setCategory] = useState(PRODUCT_SECTIONS[0]);
+  const [category, setCategory] = useState(categories[0] || "Uncategorized");
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [previewData, setPreviewData] = useState(null);
@@ -1832,7 +1872,7 @@ function BulkUpdateModal({ onClose, products, selectedIds, clearSelection }) {
                     onChange={e => setCategory(e.target.value)}
                     className="w-full border border-ink/15 rounded-lg px-4 py-2.5 bg-white dark:bg-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
                   >
-                    {PRODUCT_SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    {categories.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               )}

@@ -258,6 +258,7 @@ function playDing() {
 }
 
 function OrdersTab({ products }) {
+  const { settings } = useSettings();
   const [orders, setOrders] = useState([]);
   const [view, setView] = useState("new"); // "new" | "later" | "history"
   const [searchQuery, setSearchQuery] = useState("");
@@ -370,12 +371,24 @@ function OrdersTab({ products }) {
     const checkedItems = fulfillOrder.items.filter((_, i) => fulfillChecks[i]);
     var clipMsg = "";
     if (checkedItems.length > 0) {
-      const text = checkedItems
+      let text = "";
+      if (settings?.shopName) {
+        text += `${settings.shopName}\n`;
+        if (settings.phone) text += `${settings.phone}\n`;
+        text += `\n`;
+      }
+      text += checkedItems
         .map((it) => {
           const name = it.variant ? `${it.name} (${it.variant})` : it.name;
           return `${name}\t${it.qty}\t${it.unit}`;
         })
         .join("\n");
+      
+      if (settings?.shopName) {
+        text += `\n\nThanks for ordering with ${settings.shopName}!`;
+        if (settings.address) text += `\n${settings.address}`;
+      }
+
       var ok = await copyTextWithFallback(text);
       if (ok) {
         clipMsg = "Copied " + checkedItems.length + " item" + (checkedItems.length > 1 ? "s" : "") + " to your clipboard. Paste into Excel.";
@@ -1309,8 +1322,24 @@ function ProductForm({ product, onCancel, onSave }) {
 }
 
 function SettingsTab({ darkMode, toggleDarkMode }) {
-  const { showPrice: showPriceToCustomer, loaded } = useSettings();
+  const { showPrice: showPriceToCustomer, settings, loaded } = useSettings();
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  const [shopName, setShopName] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [retentionDays, setRetentionDays] = useState("");
+
+  useEffect(() => {
+    if (loaded && settings) {
+      setShopName(settings.shopName || "");
+      setOwnerName(settings.ownerName || "");
+      setPhone(settings.phone || "");
+      setAddress(settings.address || "");
+      setRetentionDays(settings.retentionDays || "");
+    }
+  }, [loaded, settings]);
 
   useEffect(() => {
     // Load local settings
@@ -1336,6 +1365,86 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
     const next = !soundEnabled;
     setSoundEnabled(next);
     localStorage.setItem("soundEnabled", next ? "true" : "false");
+  }
+
+  async function saveShopInfo() {
+    try {
+      await setDoc(
+        doc(db, "settings", "config"),
+        { 
+          shopName, 
+          ownerName, 
+          phone, 
+          address, 
+          retentionDays: retentionDays ? Number(retentionDays) : null 
+        },
+        { merge: true }
+      );
+      alert("Settings saved!");
+    } catch (err) {
+      alert("Could not save settings. Please check your internet and try again.");
+      console.error(err);
+    }
+  }
+
+  async function exportAllData() {
+    try {
+      const xlsx = await import("xlsx");
+      
+      const ordersSnap = await getDocs(collection(db, "orders"));
+      const productsSnap = await getDocs(collection(db, "products"));
+
+      const ordersData = ordersSnap.docs.map(d => {
+        const o = d.data();
+        const date = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString() : "";
+        return {
+          "Order ID": d.id,
+          "Customer": o.customerName,
+          "Phone": o.customerPhone,
+          "Status": o.status,
+          "Date": date,
+          "Items": (o.items || []).map(it => `${it.name} ${it.variant ? `(${it.variant})` : ''} - ${it.qty} ${it.unit}`).join(" | ")
+        };
+      });
+
+      const productsData = productsSnap.docs.map(d => {
+        const p = d.data();
+        return {
+          "Product ID": d.id,
+          "Name": p.name,
+          "Section": p.section,
+          "Price": p.price,
+          "Unit": p.unit,
+          "Variants": (p.variants || []).join(", ")
+        };
+      });
+
+      const settingsData = [{
+        "Shop Name": settings?.shopName,
+        "Owner Name": settings?.ownerName,
+        "Phone": settings?.phone,
+        "Address": settings?.address,
+        "Retention Days": settings?.retentionDays,
+        "Show Prices": settings?.showPriceToCustomer
+      }];
+
+      const wb = xlsx.utils.book_new();
+      
+      const wsOrders = xlsx.utils.json_to_sheet(ordersData);
+      xlsx.utils.book_append_sheet(wb, wsOrders, "Orders");
+      
+      const wsProducts = xlsx.utils.json_to_sheet(productsData);
+      xlsx.utils.book_append_sheet(wb, wsProducts, "Products");
+      
+      const wsSettings = xlsx.utils.json_to_sheet(settingsData);
+      xlsx.utils.book_append_sheet(wb, wsSettings, "Settings");
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      xlsx.writeFile(wb, `supreme_sanitary_backup_${dateStr}.xlsx`);
+    } catch (err) {
+      alert("Export failed. Make sure xlsx is installed.");
+      console.error(err);
+    }
   }
 
   if (!loaded) return null;
@@ -1403,6 +1512,85 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
             />
           </button>
         </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-ink/10 p-5 space-y-4">
+        <div>
+          <h2 className="font-bold text-navy mb-1">Shop Info</h2>
+          <p className="text-xs text-ink/50 mb-3">This info will appear on your order slips and exports.</p>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-ink/70 mb-1">Shop Name</label>
+            <input
+              type="text"
+              value={shopName}
+              onChange={(e) => setShopName(e.target.value)}
+              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-ink/70 mb-1">Owner Name(s)</label>
+            <input
+              type="text"
+              value={ownerName}
+              onChange={(e) => setOwnerName(e.target.value)}
+              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-semibold text-ink/70 mb-1">Phone Numbers</label>
+            <input
+              type="text"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-semibold text-ink/70 mb-1">Address</label>
+            <textarea
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              rows={2}
+              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+            />
+          </div>
+        </div>
+
+        <div className="pt-3 border-t border-ink/10">
+          <label className="block text-xs font-semibold text-ink/70 mb-1">Clear old orders after (Days)</label>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              value={retentionDays}
+              onChange={(e) => setRetentionDays(e.target.value)}
+              placeholder="Leave empty to never delete"
+              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy max-w-[200px]"
+            />
+            <span className="text-sm text-ink/50">
+              {retentionDays ? `Current setting: ${retentionDays} days` : "Current setting: Never"}
+            </span>
+          </div>
+          <p className="text-xs text-ink/40 mt-1">
+            Orders in "Past orders" older than this will be automatically deleted on load.
+          </p>
+        </div>
+
+        <div className="flex justify-end pt-3">
+          <button onClick={saveShopInfo} className="btn btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold">
+            Save Settings
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-ink/10 p-5 mt-4">
+        <h2 className="font-bold text-navy mb-1">Full Backup</h2>
+        <p className="text-xs text-ink/50 mb-3">Export all orders, products, and settings across the entire database to an Excel file.</p>
+        <button onClick={exportAllData} className="btn bg-leaf/10 text-leaf hover:bg-leaf hover:text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition">
+          Export all data
+        </button>
       </div>
     </div>
   );

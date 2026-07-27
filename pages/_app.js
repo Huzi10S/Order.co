@@ -1,6 +1,8 @@
 import Head from "next/head";
 import { useEffect } from "react";
 import "../styles/globals.css";
+import ErrorBoundary from "../components/ErrorBoundary";
+import OfflineBanner from "../components/OfflineBanner";
 
 export default function App({ Component, pageProps }) {
   useEffect(() => {
@@ -19,14 +21,15 @@ export default function App({ Component, pageProps }) {
   }, []);
 
   return (
-    <>
+    <ErrorBoundary>
       <Head>
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
         />
       </Head>
+      <OfflineBanner />
       <Component {...pageProps} />
-    </>
+    </ErrorBoundary>
   );
 }

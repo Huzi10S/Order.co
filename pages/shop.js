@@ -21,6 +21,7 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { COLLECTIONS } from "../lib/collections";
+import { useProducts } from "../lib/useProducts";
 import { useSettings } from "../lib/useSettings";
 import MoveToCategoryModal from "../components/MoveToCategoryModal";
 import CategoryManagerModal from "../components/CategoryManagerModal";

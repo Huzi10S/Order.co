@@ -1527,7 +1527,7 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
               type="text"
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}
-              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm bg-white dark:bg-cloth dark:text-ink focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
             />
           </div>
           <div>
@@ -1536,7 +1536,7 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
               type="text"
               value={ownerName}
               onChange={(e) => setOwnerName(e.target.value)}
-              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm bg-white dark:bg-cloth dark:text-ink focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
             />
           </div>
           <div className="sm:col-span-2">
@@ -1545,7 +1545,7 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
               type="text"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm bg-white dark:bg-cloth dark:text-ink focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
             />
           </div>
           <div className="sm:col-span-2">
@@ -1554,7 +1554,7 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               rows={2}
-              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm bg-white dark:bg-cloth dark:text-ink focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
             />
           </div>
         </div>
@@ -1567,7 +1567,7 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
               value={retentionDays}
               onChange={(e) => setRetentionDays(e.target.value)}
               placeholder="Leave empty to never delete"
-              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy max-w-[200px]"
+              className="w-full border border-ink/15 rounded-lg px-3 py-2 text-sm bg-white dark:bg-cloth dark:text-ink focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition max-w-[200px]"
             />
             <span className="text-sm text-ink/50">
               {retentionDays ? `Current setting: ${retentionDays} days` : "Current setting: Never"}

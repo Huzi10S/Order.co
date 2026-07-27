@@ -18,6 +18,7 @@ import {
   orderBy,
   query,
   writeBatch,
+  runTransaction,
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { COLLECTIONS } from "../lib/collections";
@@ -346,12 +347,27 @@ function OrdersTab({ products }) {
     0
   );
 
-  async function setStatus(id, status) {
+  async function setStatus(id, newStatus, currentStatus) {
     try {
-      await updateDoc(doc(db, COLLECTIONS.orders, id), { status });
+      if (currentStatus) {
+        await runTransaction(db, async (t) => {
+          const docRef = doc(db, COLLECTIONS.orders, id);
+          const snap = await t.get(docRef);
+          if (!snap.exists()) {
+            throw new Error("This order was deleted by another device.");
+          }
+          if (snap.data().status !== currentStatus) {
+            throw new Error(`This order was already updated to '${snap.data().status}' by another device. Refreshing...`);
+          }
+          t.update(docRef, { status: newStatus });
+        });
+      } else {
+        await updateDoc(doc(db, COLLECTIONS.orders, id), { status: newStatus });
+      }
     } catch (err) {
-      alert("Could not update order. Please check your internet and try again.");
+      alert(err.message || "Could not update order. Please check your internet and try again.");
       console.error(err);
+      throw err;
     }
   }
 
@@ -404,7 +420,7 @@ function OrdersTab({ products }) {
       }
     }
     try {
-      await setStatus(fulfillOrder.id, "fulfilled");
+      await setStatus(fulfillOrder.id, "fulfilled", fulfillOrder.status);
     } catch (err) {
       // setStatus already alerts
     }
@@ -420,7 +436,7 @@ function OrdersTab({ products }) {
     const previousStatus = cancelOrder.status;
     const id = cancelOrder.id;
     try {
-      await setStatus(id, "cancelled");
+      await setStatus(id, "cancelled", previousStatus);
       setCancelOrder(null);
 
       const timeoutId = setTimeout(() => {
@@ -437,20 +453,37 @@ function OrdersTab({ products }) {
     if (!undoData) return;
     clearTimeout(undoData.timeoutId);
     try {
-      await setStatus(undoData.id, undoData.previousStatus);
+      await setStatus(undoData.id, undoData.previousStatus, "cancelled");
       setUndoData(null);
     } catch (err) {
       // setStatus already alerts — keep undoData so user can retry
     }
   }
 
-  async function saveOrderItems(id, items) {
+  async function saveOrderItems(id, items, currentStatus) {
     try {
-      await updateDoc(doc(db, COLLECTIONS.orders, id), { items });
+      if (currentStatus) {
+        await runTransaction(db, async (t) => {
+          const docRef = doc(db, COLLECTIONS.orders, id);
+          const snap = await t.get(docRef);
+          if (!snap.exists()) {
+            throw new Error("This order was deleted by another device.");
+          }
+          if (snap.data().status !== currentStatus) {
+            throw new Error(`This order's status was changed to '${snap.data().status}' by another device. Refreshing...`);
+          }
+          t.update(docRef, { items });
+        });
+      } else {
+        await updateDoc(doc(db, COLLECTIONS.orders, id), { items });
+      }
       setEditOrder(null);
     } catch (err) {
-      alert("Could not update order.");
+      alert(err.message || "Could not save edits. Please check your internet and try again.");
       console.error(err);
+      if (err.message?.includes("device")) {
+        setEditOrder(null);
+      }
     }
   }
 
@@ -582,7 +615,7 @@ function OrdersTab({ products }) {
               )}
               {order.status === "pending" && (
                 <button
-                  onClick={() => setStatus(order.id, "later")}
+                  onClick={() => setStatus(order.id, "later", order.status)}
                   className="btn flex-1 bg-navy text-white rounded-lg py-2.5 text-sm font-semibold min-w-[100px]"
                 >
                   Keep for later
@@ -684,7 +717,7 @@ function EditOrderModal({ order, products, onClose, onSave }) {
 
   async function handleSave() {
     if (items.length === 0) return alert("Order must have at least 1 item.");
-    await onSave(order.id, items);
+    await onSave(order.id, items, order.status);
   }
 
   return (
@@ -882,12 +915,23 @@ function DailySummaryModal({ orders, onClose }) {
   // Insights Logic
   const topCustomers = {};
   const topProducts = {};
+  const daysOfWeek = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+  const hoursOfDay = Array(24).fill(0);
+
   filteredOrders.forEach((o) => {
     topCustomers[o.customerName] = (topCustomers[o.customerName] || 0) + 1;
     o.items.forEach((it) => {
       const name = it.variant ? `${it.name} (${it.variant})` : it.name;
       topProducts[name] = (topProducts[name] || 0) + it.qty;
     });
+
+    if (o.createdAt) {
+      const d = o.createdAt.toDate ? o.createdAt.toDate() : new Date(o.createdAt);
+      if (!isNaN(d)) {
+        daysOfWeek[d.getDay()]++;
+        hoursOfDay[d.getHours()]++;
+      }
+    }
   });
 
   const sortedCustomers = Object.entries(topCustomers)
@@ -899,6 +943,11 @@ function DailySummaryModal({ orders, onClose }) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
   const maxProductVal = sortedProducts.length ? sortedProducts[0][1] : 1;
+
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const sortedDays = Object.entries(daysOfWeek).sort((a, b) => b[1] - a[1]);
+  const maxDayVal = sortedDays.length && sortedDays[0][1] > 0 ? sortedDays[0][1] : 1;
+  const maxHourVal = Math.max(...hoursOfDay, 1);
 
   function exportToExcel() {
     import("xlsx").then((XLSX) => {
@@ -1028,6 +1077,50 @@ function DailySummaryModal({ orders, onClose }) {
                   ))}
                 </div>
               </div>
+              <div>
+                <h3 className="font-bold text-ink mb-3 text-sm mt-6 pt-6 border-t border-ink/10">Busiest Days</h3>
+                {sortedDays[0][1] === 0 ? <p className="text-sm text-ink/50">No data</p> : (
+                  <div className="space-y-3">
+                    {sortedDays.filter(([_, count]) => count > 0).slice(0, 5).map(([dayIdx, count]) => (
+                      <div key={dayIdx} className="relative">
+                        <div className="flex justify-between text-sm mb-1 relative z-10">
+                          <span className="font-medium text-ink">{dayNames[dayIdx]}</span>
+                          <span className="text-ink/60 font-semibold">{count}</span>
+                        </div>
+                        <div className="h-2 w-full bg-cloth rounded-full overflow-hidden">
+                          <div className="h-full bg-leaf rounded-full" style={{ width: `${(count / maxDayVal) * 100}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="font-bold text-ink mb-3 text-sm mt-6 pt-6 border-t border-ink/10">Order Activity by Hour</h3>
+                {maxHourVal <= 1 && hoursOfDay.every(h => h === 0) ? <p className="text-sm text-ink/50">No data</p> : (
+                  <>
+                    <div className="flex items-end gap-[1px] sm:gap-1 h-20 mt-2">
+                      {hoursOfDay.map((count, hr) => (
+                        <div key={hr} className="flex-1 flex flex-col justify-end group relative h-full">
+                          <div 
+                            className="w-full bg-navy/40 rounded-t-sm group-hover:bg-navy transition-colors" 
+                            style={{ height: `${(count / maxHourVal) * 100}%`, minHeight: count > 0 ? '4px' : '0' }}
+                          ></div>
+                          <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-navy text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-20">
+                            {hr === 0 ? '12 AM' : hr < 12 ? `${hr} AM` : hr === 12 ? '12 PM' : `${hr-12} PM`}: {count}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-[10px] text-ink/40 font-medium mt-1">
+                      <span>12am</span>
+                      <span>12pm</span>
+                      <span>11pm</span>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -1121,27 +1214,51 @@ function ProductsTab({ products, connError }) {
 
   async function saveProduct(p) {
     try {
-      const { id, ...rest } = p;
-      await updateDoc(doc(db, COLLECTIONS.products, id), rest);
+      const { id, initialUpdatedAt, ...rest } = p;
+      const newUpdatedAt = Date.now();
+      rest.updatedAt = newUpdatedAt;
+      
+      await runTransaction(db, async (t) => {
+        const docRef = doc(db, COLLECTIONS.products, id);
+        const snap = await t.get(docRef);
+        if (!snap.exists()) {
+          throw new Error("This product was deleted by another device.");
+        }
+        if (snap.data().updatedAt !== initialUpdatedAt) {
+          throw new Error("This product was changed elsewhere — reload to see the latest version before saving.");
+        }
+        t.update(docRef, rest);
+      });
       setEditing(null);
     } catch (err) {
-      alert("Could not save product. Please check your internet and try again.");
+      alert(err.message || "Could not save product. Please check your internet and try again.");
       console.error(err);
+      if (err.message?.includes("elsewhere") || err.message?.includes("deleted")) {
+        setEditing(null);
+      }
     }
   }
 
   async function removeProduct(id) {
     if (!confirm("Delete this product? This can't be undone.")) return;
     try {
-      await deleteDoc(doc(db, COLLECTIONS.products, id));
+      await runTransaction(db, async (t) => {
+        const docRef = doc(db, COLLECTIONS.products, id);
+        const snap = await t.get(docRef);
+        if (!snap.exists()) {
+          throw new Error("This product was already deleted by another device.");
+        }
+        t.delete(docRef);
+      });
     } catch (err) {
-      alert("Could not delete product. Please check your internet and try again.");
+      alert(err.message || "Could not delete product. Please check your internet and try again.");
       console.error(err);
     }
   }
 
   async function createProduct(p) {
     try {
+      p.updatedAt = Date.now();
       await addDoc(collection(db, COLLECTIONS.products), p);
       setAdding(false);
     } catch (err) {
@@ -1340,6 +1457,7 @@ function ProductForm({ product, onCancel, onSave, categories }) {
   const [price, setPrice] = useState(product?.price || "");
   const [variants, setVariants] = useState((product?.variants || []).join(", "));
   const [inStock, setInStock] = useState(product?.inStock !== false);
+  const [initialUpdatedAt] = useState(product?.updatedAt || undefined);
 
   function submit(e) {
     e.preventDefault();
@@ -1350,6 +1468,7 @@ function ProductForm({ product, onCancel, onSave, categories }) {
       unit: unit.trim() || "pcs",
       price: price ? Number(price) : null,
       inStock,
+      initialUpdatedAt,
       variants: variants
         .split(",")
         .map((v) => v.trim())

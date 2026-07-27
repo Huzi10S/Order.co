@@ -1477,18 +1477,18 @@ function ProductForm({ product, onCancel, onSave, categories }) {
   }
 
   return (
-    <form onSubmit={submit} className="bg-white rounded-xl border border-ink/10 p-4 mb-3 space-y-3">
+    <form onSubmit={submit} className="bg-white dark:bg-surface rounded-xl border border-ink/10 dark:border-white/10 p-4 mb-3 space-y-3">
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Product name"
         required
-        className="w-full border border-ink/15 rounded-lg px-4 py-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
+        className="w-full border border-ink/15 dark:border-white/10 rounded-lg px-4 py-3 bg-white dark:bg-cloth dark:text-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
       />
       <select
         value={section}
         onChange={(e) => setSection(e.target.value)}
-        className="w-full border border-ink/15 rounded-lg px-4 py-3 bg-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
+        className="w-full border border-ink/15 dark:border-white/10 rounded-lg px-4 py-3 bg-white dark:bg-cloth dark:text-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
       >
         {categories.map((s) => <option key={s} value={s}>{s}</option>)}
       </select>
@@ -1497,7 +1497,7 @@ function ProductForm({ product, onCancel, onSave, categories }) {
           value={unit}
           onChange={(e) => setUnit(e.target.value)}
           placeholder="Unit (pcs, box, meter...)"
-          className="w-1/2 border border-ink/15 rounded-lg px-4 py-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
+          className="w-1/2 border border-ink/15 dark:border-white/10 rounded-lg px-4 py-3 bg-white dark:bg-cloth dark:text-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
         />
         <input
           value={price}
@@ -1505,21 +1505,21 @@ function ProductForm({ product, onCancel, onSave, categories }) {
           placeholder="Price (optional)"
           type="number"
           inputMode="numeric"
-          className="w-1/2 border border-ink/15 rounded-lg px-4 py-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
+          className="w-1/2 border border-ink/15 dark:border-white/10 rounded-lg px-4 py-3 bg-white dark:bg-cloth dark:text-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
         />
       </div>
       <input
         value={variants}
         onChange={(e) => setVariants(e.target.value)}
         placeholder="Sizes, comma separated (optional) e.g. 6in, 8in, 9in"
-        className="w-full border border-ink/15 rounded-lg px-4 py-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
+        className="w-full border border-ink/15 dark:border-white/10 rounded-lg px-4 py-3 bg-white dark:bg-cloth dark:text-white focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy dark:focus:border-accent dark:focus:ring-accent transition"
       />
-      <label className="flex items-center gap-2 text-sm text-ink font-medium cursor-pointer">
+      <label className="flex items-center gap-2 text-sm text-ink dark:text-white/90 font-medium cursor-pointer">
         <input 
           type="checkbox" 
           checked={!inStock} 
           onChange={(e) => setInStock(!e.target.checked)}
-          className="w-4 h-4 accent-rust rounded border-ink/20 shrink-0"
+          className="w-4 h-4 accent-rust rounded border-ink/20 dark:border-white/20 shrink-0"
         />
         Mark as out of stock
       </label>
@@ -1527,7 +1527,7 @@ function ProductForm({ product, onCancel, onSave, categories }) {
         <button type="submit" className="btn btn-primary flex-1 rounded-lg py-2 text-sm font-semibold">
           Save
         </button>
-        <button type="button" onClick={onCancel} className="btn flex-1 bg-cloth border border-ink/15 rounded-lg py-2 text-sm font-semibold">
+        <button type="button" onClick={onCancel} className="btn flex-1 bg-cloth dark:bg-white/5 border border-ink/15 dark:border-white/10 dark:text-white rounded-lg py-2 text-sm font-semibold hover:dark:bg-white/10 transition">
           Cancel
         </button>
       </div>

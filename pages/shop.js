@@ -1041,6 +1041,7 @@ function DailySummaryModal({ orders, onClose }) {
 
 function ProductsTab({ products, connError }) {
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -1059,9 +1060,11 @@ function ProductsTab({ products, connError }) {
     return unsub;
   }, []);
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.trim().toLowerCase())
-  );
+  const filtered = products.filter((p) => {
+    const matchesSearch = p.name.toLowerCase().includes(search.trim().toLowerCase());
+    const matchesCategory = categoryFilter === "All" || p.section === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   function toggleSelection(id) {
     setSelectedIds((prev) => {
@@ -1148,6 +1151,25 @@ function ProductsTab({ products, connError }) {
       )}
 
       <div className="flex flex-col gap-3 mb-4">
+        <div className="flex gap-2 overflow-x-auto pb-1 snap-x hide-scrollbar">
+          {["All", ...PRODUCT_SECTIONS].map((cat) => {
+            const count = cat === "All" ? products.length : products.filter(p => p.section === cat).length;
+            return (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={`btn px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap snap-start transition border ${
+                  categoryFilter === cat
+                    ? "bg-navy text-white border-navy dark:bg-accent dark:text-bg dark:border-accent"
+                    : "bg-white text-ink/70 border-ink/15 hover:bg-ink/5 dark:bg-[#5D5C6E] dark:border-transparent dark:text-ink/90"
+                }`}
+              >
+                {cat} <span className="opacity-60 text-xs ml-1">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="flex items-center gap-3">
           <input
             value={search}
@@ -1171,7 +1193,7 @@ function ProductsTab({ products, connError }) {
               onChange={toggleAll}
               className="w-4 h-4 rounded border-ink/20 text-navy focus:ring-navy"
             />
-            Select all
+            Select all {filtered.length > 0 ? `(${filtered.length})` : ""}
           </label>
           <div className="flex items-center gap-2">
             {undoState && (
@@ -1205,7 +1227,7 @@ function ProductsTab({ products, connError }) {
         />
       )}
 
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {filtered.map((p) =>
           editing === p.id ? (
             <ProductForm
@@ -1215,26 +1237,26 @@ function ProductsTab({ products, connError }) {
               onSave={saveProduct}
             />
           ) : (
-            <div key={p.id} className="bg-white rounded-xl border border-ink/10 p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div key={p.id} className="bg-white dark:bg-surface rounded-xl border border-ink/10 p-4 flex flex-col justify-between h-full relative">
+              <div className="flex items-start gap-3 mb-3">
                 <input 
                   type="checkbox"
                   checked={selectedIds.has(p.id)}
                   onChange={() => toggleSelection(p.id)}
-                  className="w-4 h-4 rounded border-ink/20 text-navy focus:ring-navy"
+                  className="w-4 h-4 rounded border-ink/20 text-navy focus:ring-navy mt-1 shrink-0"
                 />
                 <div>
-                  <p className="font-medium text-ink text-sm">{p.name}</p>
-                  <p className="text-xs text-ink/50">
+                  <p className="font-semibold text-ink text-sm leading-tight mb-1 pr-6">{p.name}</p>
+                  <p className="text-xs text-ink/60">
                     {p.section} · {p.unit}
-                    {p.price ? ` · ₹${Number(p.price).toLocaleString('en-IN')}` : ""}
                     {p.variants?.length ? ` · ${p.variants.length} sizes` : ""}
                   </p>
+                  {p.price ? <p className="text-sm font-bold text-navy dark:text-accent mt-1">₹{Number(p.price).toLocaleString('en-IN')}</p> : null}
                 </div>
               </div>
-              <div className="flex gap-3 text-sm font-semibold">
-                <button onClick={() => setEditing(p.id)} className="btn btn-ghost text-navy">Edit</button>
-                <button onClick={() => removeProduct(p.id)} className="btn btn-ghost text-rust">Delete</button>
+              <div className="flex justify-end gap-2 pt-3 border-t border-ink/5 mt-auto">
+                <button onClick={() => setEditing(p.id)} className="btn btn-ghost text-navy dark:text-accent text-sm font-semibold px-3 py-1.5">Edit</button>
+                <button onClick={() => removeProduct(p.id)} className="btn btn-ghost text-rust text-sm font-semibold px-3 py-1.5">Delete</button>
               </div>
             </div>
           )

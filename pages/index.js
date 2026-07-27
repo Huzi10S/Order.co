@@ -169,7 +169,7 @@ export default function CustomerPage() {
 
   return (
     <div className="min-h-screen bg-cloth pb-28">
-      <header className="bg-navy text-white sticky top-0 z-20 border-b border-white/10">
+      <header className="bg-navy text-white relative z-20 border-b border-white/10">
         <div className="max-w-3xl mx-auto px-4 py-3 md:py-4 flex flex-col gap-4">
           
           {/* Top Row: Title, Tagline & Login */}

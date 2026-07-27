@@ -8,6 +8,7 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { COLLECTIONS } from "../lib/collections";
 import { PRODUCT_SECTIONS } from "../lib/constants";
 import { useProducts } from "../lib/useProducts";
 import { useSettings } from "../lib/useSettings";
@@ -113,7 +114,7 @@ export default function CustomerPage() {
     }
     setPlacing(true);
     try {
-      await addDoc(collection(db, "orders"), {
+      await addDoc(collection(db, COLLECTIONS.orders), {
         customerName: customerName.trim().slice(0, 100),
         customerPhone: customerPhone.trim().slice(0, 20) || "",
         status: "pending",

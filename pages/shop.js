@@ -20,6 +20,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
+import { COLLECTIONS } from "../lib/collections";
 import { PRODUCT_SECTIONS } from "../lib/constants";
 import { useProducts } from "../lib/useProducts";
 import { useSettings } from "../lib/useSettings";
@@ -278,7 +279,7 @@ function OrdersTab({ products }) {
     let isInitial = true;
     let loadTime = new Date();
 
-    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, COLLECTIONS.orders), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(
       q,
       (snap) => {
@@ -342,7 +343,7 @@ function OrdersTab({ products }) {
 
   async function setStatus(id, status) {
     try {
-      await updateDoc(doc(db, "orders", id), { status });
+      await updateDoc(doc(db, COLLECTIONS.orders, id), { status });
     } catch (err) {
       alert("Could not update order. Please check your internet and try again.");
       console.error(err);
@@ -413,25 +414,34 @@ function OrdersTab({ products }) {
   async function confirmCancel() {
     const previousStatus = cancelOrder.status;
     const id = cancelOrder.id;
-    await setStatus(id, "cancelled");
-    setCancelOrder(null);
+    try {
+      await setStatus(id, "cancelled");
+      setCancelOrder(null);
 
-    const timeoutId = setTimeout(() => {
-      setUndoData((prev) => (prev?.id === id ? null : prev));
-    }, 5000);
-    setUndoData({ id, previousStatus, timeoutId });
+      const timeoutId = setTimeout(() => {
+        setUndoData((prev) => (prev?.id === id ? null : prev));
+      }, 5000);
+      setUndoData({ id, previousStatus, timeoutId });
+    } catch (err) {
+      // setStatus already alerts — just don't set undo data
+      setCancelOrder(null);
+    }
   }
 
   async function handleUndo() {
     if (!undoData) return;
     clearTimeout(undoData.timeoutId);
-    await setStatus(undoData.id, undoData.previousStatus);
-    setUndoData(null);
+    try {
+      await setStatus(undoData.id, undoData.previousStatus);
+      setUndoData(null);
+    } catch (err) {
+      // setStatus already alerts — keep undoData so user can retry
+    }
   }
 
   async function saveOrderItems(id, items) {
     try {
-      await updateDoc(doc(db, "orders", id), { items });
+      await updateDoc(doc(db, COLLECTIONS.orders, id), { items });
       setEditOrder(null);
     } catch (err) {
       alert("Could not update order.");
@@ -1039,7 +1049,7 @@ function ProductsTab({ products, connError }) {
   const [undoState, setUndoState] = useState(null);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "settings", "lastBulkUpdate"), (snap) => {
+    const unsub = onSnapshot(doc(db, COLLECTIONS.settings, "lastBulkUpdate"), (snap) => {
       if (snap.exists()) {
         setUndoState(snap.data());
       } else {
@@ -1078,12 +1088,12 @@ function ProductsTab({ products, connError }) {
       const batch = writeBatch(db);
       let count = 0;
       for (const [id, oldPrice] of Object.entries(undoState.changes)) {
-        batch.update(doc(db, "products", id), { price: oldPrice });
+        batch.update(doc(db, COLLECTIONS.products, id), { price: oldPrice });
         count++;
       }
-      batch.delete(doc(db, "settings", "lastBulkUpdate"));
+      batch.delete(doc(db, COLLECTIONS.settings, "lastBulkUpdate"));
       
-      batch.set(doc(collection(db, "priceUpdateLog")), {
+      batch.set(doc(collection(db, COLLECTIONS.priceUpdateLog)), {
         timestamp: new Date().toISOString(),
         scope: "Undo",
         mode: "revert",
@@ -1101,7 +1111,7 @@ function ProductsTab({ products, connError }) {
   async function saveProduct(p) {
     try {
       const { id, ...rest } = p;
-      await updateDoc(doc(db, "products", id), rest);
+      await updateDoc(doc(db, COLLECTIONS.products, id), rest);
       setEditing(null);
     } catch (err) {
       alert("Could not save product. Please check your internet and try again.");
@@ -1112,7 +1122,7 @@ function ProductsTab({ products, connError }) {
   async function removeProduct(id) {
     if (!confirm("Delete this product? This can't be undone.")) return;
     try {
-      await deleteDoc(doc(db, "products", id));
+      await deleteDoc(doc(db, COLLECTIONS.products, id));
     } catch (err) {
       alert("Could not delete product. Please check your internet and try again.");
       console.error(err);
@@ -1121,7 +1131,7 @@ function ProductsTab({ products, connError }) {
 
   async function createProduct(p) {
     try {
-      await addDoc(collection(db, "products"), p);
+      await addDoc(collection(db, COLLECTIONS.products), p);
       setAdding(false);
     } catch (err) {
       alert("Could not add product. Please check your internet and try again.");
@@ -1353,7 +1363,7 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
     const next = !showPriceToCustomer;
     // We update Firestore; the onSnapshot listener in useSettings will trigger UI updates
     try {
-      await setDoc(doc(db, "settings", "config"), { showPriceToCustomer: next }, { merge: true });
+      await setDoc(doc(db, COLLECTIONS.settings, "config"), { showPriceToCustomer: next }, { merge: true });
     } catch (err) {
       alert("Could not save setting. Please check your internet and try again.");
       console.error(err);
@@ -1370,7 +1380,7 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
   async function saveShopInfo() {
     try {
       await setDoc(
-        doc(db, "settings", "config"),
+        doc(db, COLLECTIONS.settings, "config"),
         { 
           shopName, 
           ownerName, 
@@ -1391,8 +1401,8 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
     try {
       const xlsx = await import("xlsx");
       
-      const ordersSnap = await getDocs(collection(db, "orders"));
-      const productsSnap = await getDocs(collection(db, "products"));
+      const ordersSnap = await getDocs(collection(db, COLLECTIONS.orders));
+      const productsSnap = await getDocs(collection(db, COLLECTIONS.products));
 
       const ordersData = ordersSnap.docs.map(d => {
         const o = d.data();
@@ -1441,6 +1451,7 @@ function SettingsTab({ darkMode, toggleDarkMode }) {
 
       const dateStr = new Date().toISOString().split('T')[0];
       xlsx.writeFile(wb, `supreme_sanitary_backup_${dateStr}.xlsx`);
+      localStorage.setItem("lastExportTime", String(Date.now()));
     } catch (err) {
       alert("Export failed. Make sure xlsx is installed.");
       console.error(err);
@@ -1660,6 +1671,13 @@ function BulkUpdateModal({ onClose, products, selectedIds, clearSelection }) {
       return;
     }
 
+    // Check for recent backup
+    const lastExport = localStorage.getItem("lastExportTime");
+    const hoursSinceExport = lastExport ? (Date.now() - Number(lastExport)) / 3600000 : Infinity;
+    if (hoursSinceExport > 24) {
+      if (!confirm("No backup exported in the last 24 hours. It's recommended to export data first.\n\nProceed anyway?")) return;
+    }
+
     if (!confirm(`Are you sure you want to update ${validUpdates.length} products?`)) return;
 
     setBusy(true);
@@ -1668,11 +1686,12 @@ function BulkUpdateModal({ onClose, products, selectedIds, clearSelection }) {
       const changes = {};
       
       validUpdates.forEach(item => {
-        batch.update(doc(db, "products", item.product.id), { price: item.newPrice });
+        batch.update(doc(db, COLLECTIONS.products, item.product.id), { price: item.newPrice });
         changes[item.product.id] = item.oldPrice;
       });
 
-      batch.set(doc(db, "settings", "lastBulkUpdate"), {
+      // Quick-undo doc (overwritten each time)
+      batch.set(doc(db, COLLECTIONS.settings, "lastBulkUpdate"), {
         timestamp: new Date().toISOString(),
         scope,
         mode,
@@ -1680,7 +1699,17 @@ function BulkUpdateModal({ onClose, products, selectedIds, clearSelection }) {
         changes
       });
 
-      batch.set(doc(collection(db, "priceUpdateLog")), {
+      // Rolling backup (separate doc, kept up to 5)
+      batch.set(doc(collection(db, COLLECTIONS.priceUpdateBackups)), {
+        timestamp: new Date().toISOString(),
+        scope,
+        mode,
+        value: Number(value),
+        changes
+      });
+
+      // Audit log
+      batch.set(doc(collection(db, COLLECTIONS.priceUpdateLog)), {
         timestamp: new Date().toISOString(),
         scope: scope === "category" ? category : scope,
         mode,
@@ -1689,11 +1718,52 @@ function BulkUpdateModal({ onClose, products, selectedIds, clearSelection }) {
       });
 
       await batch.commit();
+
+      // --- Read-back verification (spot-check up to 3 random docs) ---
+      const sampleSize = Math.min(3, validUpdates.length);
+      const shuffled = [...validUpdates].sort(() => Math.random() - 0.5);
+      const sample = shuffled.slice(0, sampleSize);
+      let verified = 0;
+      let failed = 0;
+      for (const item of sample) {
+        try {
+          const snap = await getDoc(doc(db, COLLECTIONS.products, item.product.id));
+          if (snap.exists() && Number(snap.data().price) === item.newPrice) {
+            verified++;
+          } else {
+            failed++;
+          }
+        } catch (e) {
+          failed++;
+        }
+      }
+
+      // Cleanup: keep only last 5 rolling backups
+      try {
+        const backupSnap = await getDocs(
+          query(collection(db, COLLECTIONS.priceUpdateBackups), orderBy("timestamp", "desc"))
+        );
+        const toDelete = backupSnap.docs.slice(5);
+        if (toDelete.length > 0) {
+          const cleanupBatch = writeBatch(db);
+          toDelete.forEach(d => cleanupBatch.delete(d.ref));
+          await cleanupBatch.commit();
+        }
+      } catch (e) {
+        console.warn("Backup cleanup failed (non-critical):", e);
+      }
+
+      // Show result
+      if (failed > 0) {
+        alert(`Update complete. Spot-check: ${verified}/${sampleSize} verified, ${failed} could not be confirmed. Please review the Products tab.`);
+      } else {
+        alert(`${validUpdates.length} products updated successfully (${verified}/${sampleSize} verified).`);
+      }
       
       if (scope === "selected") clearSelection();
       onClose();
     } catch (e) {
-      alert("Could not update prices.");
+      alert("Update failed — no changes were made.");
       console.error(e);
     } finally {
       setBusy(false);
@@ -1831,7 +1901,7 @@ function PriceUpdateHistoryModal({ onClose }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getDocs(query(collection(db, "priceUpdateLog"), orderBy("timestamp", "desc"), limit(50)))
+    getDocs(query(collection(db, COLLECTIONS.priceUpdateLog), orderBy("timestamp", "desc"), limit(50)))
       .then(snap => {
         setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         setLoading(false);

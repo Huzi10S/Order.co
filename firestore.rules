@@ -57,6 +57,11 @@ service cloud.firestore {
       allow read, write: if isShopOwner();
     }
 
+    // ─── Rolling Backups (bulk price update safety net) ───
+    match /priceUpdateBackups/{backupId} {
+      allow read, write: if isShopOwner();
+    }
+
     // ─── Catch-all deny ───
     // Any collection not explicitly matched above is denied by default.
     // This is Firestore's default behavior, but making it explicit

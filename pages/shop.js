@@ -109,6 +109,8 @@ function LoginScreen() {
         <h1 className="text-2xl font-bold text-navy mb-1">Shop dashboard</h1>
         <p className="text-ink/50 text-sm mb-6">Log in to see orders and manage products</p>
         <input
+          id="username"
+          name="username"
           type="text"
           required
           value={username}
@@ -118,6 +120,8 @@ function LoginScreen() {
           className="w-full border border-ink/15 rounded-lg px-4 py-3 mb-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
         />
         <input
+          id="password"
+          name="password"
           type="password"
           required
           value={password}

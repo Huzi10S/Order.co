@@ -736,16 +736,16 @@ function EditOrderModal({ order, products, onClose, onSave }) {
           </div>
         </div>
 
-        <div className="p-5 border-t border-ink/10 flex gap-2">
+        <div className="p-5 border-t border-ink/10 flex flex-col-reverse sm:flex-row gap-2.5">
           <button
             onClick={onClose}
-            className="btn flex-1 bg-cloth border border-ink/15 rounded-lg py-3 text-sm font-semibold"
+            className="btn w-full sm:flex-1 bg-cloth border border-ink/15 rounded-lg py-3 px-4 text-sm font-semibold"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="btn bg-leaf text-white rounded-lg py-3 text-sm font-bold"
+            className="btn w-full sm:flex-1 bg-leaf text-white rounded-lg py-3 px-4 text-sm font-bold"
           >
             Save changes
           </button>
@@ -805,16 +805,16 @@ function FulfillModal({ order, checks, setChecks, onCancel, onConfirm }) {
           </button>
         </div>
 
-        <div className="p-5 border-t border-ink/10 flex gap-2">
+        <div className="p-5 border-t border-ink/10 flex flex-col-reverse sm:flex-row gap-2.5">
           <button
             onClick={onCancel}
-            className="btn flex-1 bg-cloth border border-ink/15 rounded-lg py-3 text-sm font-semibold"
+            className="btn w-full sm:flex-1 bg-cloth border border-ink/15 rounded-lg py-3 px-4 text-sm font-semibold"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="btn bg-leaf text-white rounded-lg py-3 text-sm font-bold"
+            className="btn w-full sm:flex-1 bg-leaf text-white rounded-lg py-3 px-4 text-sm font-bold"
           >
             Fulfill ({checkedCount})
           </button>
@@ -831,16 +831,16 @@ function ConfirmModal({ title, message, confirmLabel, onConfirm, onClose }) {
       <div className="relative bg-white rounded-xl border border-ink/10 p-6 max-w-sm w-full">
         <h2 className="font-bold text-navy text-lg mb-2">{title}</h2>
         <p className="text-sm text-ink/60 mb-5">{message}</p>
-        <div className="flex gap-2">
+        <div className="flex flex-col-reverse sm:flex-row gap-2.5">
           <button
             onClick={onClose}
-            className="btn flex-1 bg-cloth border border-ink/15 rounded-lg py-2.5 text-sm font-semibold"
+            className="btn w-full sm:flex-1 bg-cloth border border-ink/15 rounded-lg py-3 px-4 text-sm font-semibold"
           >
             No, go back
           </button>
           <button
             onClick={onConfirm}
-            className="btn bg-rust text-white rounded-lg py-2.5 text-sm font-semibold"
+            className="btn w-full sm:flex-1 bg-rust text-white rounded-lg py-3 px-4 text-sm font-semibold"
           >
             {confirmLabel}
           </button>
@@ -1950,7 +1950,7 @@ function BulkUpdateModal({ onClose, products, selectedIds, clearSelection, categ
                 <button 
                   onClick={confirmBulkUpdate} 
                   disabled={validCount === 0 || busy}
-                  className="btn btn-primary flex-1 py-3 rounded-xl font-semibold disabled:opacity-50"
+                  className="btn btn-primary flex-1 px-4 py-3 rounded-xl font-semibold disabled:opacity-50 whitespace-normal"
                 >
                   {busy ? "Applying..." : `Confirm and Update ${validCount} Items`}
                 </button>

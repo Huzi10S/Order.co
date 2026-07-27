@@ -51,9 +51,9 @@ export default function MoveToCategoryModal({ onClose, products, selectedIds, cl
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="btn btn-ghost px-5 py-2 text-sm font-semibold">Cancel</button>
-            <button type="submit" disabled={moving} className="btn btn-primary px-5 py-2 text-sm font-semibold">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
+            <button type="button" onClick={onClose} className="btn w-full sm:w-auto btn-ghost px-5 py-2 text-sm font-semibold">Cancel</button>
+            <button type="submit" disabled={moving} className="btn w-full sm:w-auto btn-primary px-5 py-2 text-sm font-semibold">
               {moving ? "Moving..." : "Move"}
             </button>
           </div>

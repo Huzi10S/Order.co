@@ -186,7 +186,7 @@ export default function CategoryManagerModal({ onClose, categories, products }) 
           {selectedCats.size > 0 && (
             <div className="bg-rust/5 border border-rust/20 rounded-lg p-4 mb-6">
               <h3 className="font-semibold text-rust text-sm mb-2">Merge {selectedCats.size} categories</h3>
-              <form onSubmit={handleMerge} className="flex gap-2">
+              <form onSubmit={handleMerge} className="flex flex-col sm:flex-row gap-2">
                 <input 
                   value={mergeTarget}
                   onChange={(e) => setMergeTarget(e.target.value)}
@@ -194,8 +194,10 @@ export default function CategoryManagerModal({ onClose, categories, products }) 
                   className="flex-1 border border-ink/15 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rust"
                   required
                 />
-                <button type="submit" disabled={saving} className="btn bg-rust text-white font-semibold text-sm px-4 py-2">Merge</button>
-                <button type="button" onClick={() => setSelectedCats(new Set())} className="btn btn-ghost px-3 text-sm">Cancel</button>
+                <div className="flex flex-col-reverse sm:flex-row gap-2">
+                  <button type="button" onClick={() => setSelectedCats(new Set())} className="btn w-full sm:w-auto btn-ghost px-3 py-2 text-sm">Cancel</button>
+                  <button type="submit" disabled={saving} className="btn w-full sm:w-auto bg-rust text-white font-semibold text-sm px-4 py-2">Merge</button>
+                </div>
               </form>
             </div>
           )}
@@ -212,15 +214,17 @@ export default function CategoryManagerModal({ onClose, categories, products }) 
                 />
                 
                 {editingCat === cat ? (
-                  <form onSubmit={saveEdit} className="flex-1 flex gap-2">
+                  <form onSubmit={saveEdit} className="flex-1 flex flex-col sm:flex-row gap-2">
                     <input 
                       autoFocus
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       className="flex-1 border border-ink/15 rounded px-2 py-1 text-sm focus:outline-none focus:border-navy"
                     />
-                    <button type="submit" disabled={saving} className="text-navy font-bold text-sm">Save</button>
-                    <button type="button" onClick={() => setEditingCat(null)} className="text-ink/50 text-sm">Cancel</button>
+                    <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end">
+                      <button type="button" onClick={() => setEditingCat(null)} className="text-ink/50 text-sm font-semibold px-2 py-1">Cancel</button>
+                      <button type="submit" disabled={saving} className="text-navy text-sm font-bold px-2 py-1 bg-navy/5 rounded">Save</button>
+                    </div>
                   </form>
                 ) : (
                   <div className="flex-1 flex items-center justify-between">

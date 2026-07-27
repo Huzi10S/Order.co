@@ -67,7 +67,12 @@ export default function CustomerPage() {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
   }
 
-  const cartItems = Object.values(cart);
+  const cartItems = Object.values(cart)
+    .map(c => {
+      const liveProd = products.find(p => p.id === c.product.id) || c.product;
+      return { ...c, product: liveProd };
+    })
+    .filter(c => c.product.inStock !== false);
   const totalItems = cartItems.reduce((sum, c) => sum + c.qty, 0);
 
   function updateCart(product, variant, qty) {
@@ -344,8 +349,10 @@ function ProductCard({ product, showPrice, cart, onChange }) {
   const [variant, setVariant] = useState(hasVariants ? product.variants[0] : null);
   const key = cartKey(product.id, variant);
   const qty = cart[key]?.qty || 0;
+  const outOfStock = product.inStock === false;
 
   function setQty(newQty) {
+    if (outOfStock) return;
     onChange(product, variant, newQty);
   }
 
@@ -355,9 +362,16 @@ function ProductCard({ product, showPrice, cart, onChange }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-ink/10 p-4 flex flex-col gap-3">
+    <div className={`bg-white rounded-xl border border-ink/10 p-4 flex flex-col gap-3 transition-opacity ${outOfStock ? 'opacity-70' : ''}`}>
       <div>
-        <p className="font-semibold text-ink leading-snug">{product.name}</p>
+        <p className="font-semibold text-ink leading-snug">
+          {product.name}
+          {outOfStock && (
+            <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-rust/10 text-rust uppercase tracking-wide align-middle">
+              Out of stock
+            </span>
+          )}
+        </p>
         <p className="text-xs text-ink/50 mt-0.5">
           {product.unit}
           {showPrice && product.price ? ` · ₹${Number(product.price).toLocaleString('en-IN')}` : ""}
@@ -368,7 +382,8 @@ function ProductCard({ product, showPrice, cart, onChange }) {
         <select
           value={variant}
           onChange={(e) => changeVariant(e.target.value)}
-          className="border border-ink/15 rounded-lg px-2.5 py-2 text-sm bg-cloth"
+          disabled={outOfStock}
+          className="border border-ink/15 rounded-lg px-2.5 py-2 text-sm bg-cloth disabled:opacity-50"
         >
           {product.variants.map((v) => (
             <option key={v} value={v}>{v}</option>
@@ -377,29 +392,33 @@ function ProductCard({ product, showPrice, cart, onChange }) {
       )}
 
       <div className="flex items-center justify-between gap-2 mt-auto">
-        <div className="flex items-center border border-ink/15 rounded-lg overflow-hidden h-10">
-          <button
-            onClick={() => setQty(Math.max(0, qty - 1))}
-            className="btn w-10 h-full text-lg text-navy bg-cloth/30"
-          >
-            −
-          </button>
-          <input
-            type="number"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            value={qty}
-            onChange={(e) => setQty(Math.max(0, parseInt(e.target.value) || 0))}
-            className="w-12 h-full text-center outline-none bg-transparent"
-          />
-          <button
-            onClick={() => setQty(qty + 1)}
-            className="btn w-10 h-full text-lg text-navy bg-cloth/30"
-          >
-            +
-          </button>
-        </div>
-        {qty > 0 && (
+        {outOfStock ? (
+          <div className="text-sm font-semibold text-rust mt-1">Currently unavailable</div>
+        ) : (
+          <div className="flex items-center border border-ink/15 rounded-lg overflow-hidden h-10">
+            <button
+              onClick={() => setQty(Math.max(0, qty - 1))}
+              className="btn w-10 h-full text-lg text-navy bg-cloth/30"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={qty}
+              onChange={(e) => setQty(Math.max(0, parseInt(e.target.value) || 0))}
+              className="w-12 h-full text-center outline-none bg-transparent"
+            />
+            <button
+              onClick={() => setQty(qty + 1)}
+              className="btn w-10 h-full text-lg text-navy bg-cloth/30"
+            >
+              +
+            </button>
+          </div>
+        )}
+        {qty > 0 && !outOfStock && (
           <span className="text-xs font-semibold text-leaf bg-leaf/10 rounded-md px-2 py-1">
             Added
           </span>

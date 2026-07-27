@@ -1272,7 +1272,14 @@ function ProductsTab({ products, connError }) {
                   className="w-4 h-4 rounded border-ink/20 text-navy focus:ring-navy mt-1 shrink-0"
                 />
                 <div>
-                  <p className="font-semibold text-ink text-sm leading-tight mb-1 pr-6">{p.name}</p>
+                  <p className="font-semibold text-ink text-sm leading-tight mb-1 pr-6">
+                    {p.name}
+                    {p.inStock === false && (
+                      <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-rust/10 text-rust uppercase tracking-wide align-middle">
+                        Out of stock
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-ink/60">
                     {p.section} · {p.unit}
                     {p.variants?.length ? ` · ${p.variants.length} sizes` : ""}
@@ -1332,6 +1339,7 @@ function ProductForm({ product, onCancel, onSave, categories }) {
   const [unit, setUnit] = useState(product?.unit || "pcs");
   const [price, setPrice] = useState(product?.price || "");
   const [variants, setVariants] = useState((product?.variants || []).join(", "));
+  const [inStock, setInStock] = useState(product?.inStock !== false);
 
   function submit(e) {
     e.preventDefault();
@@ -1341,6 +1349,7 @@ function ProductForm({ product, onCancel, onSave, categories }) {
       section,
       unit: unit.trim() || "pcs",
       price: price ? Number(price) : null,
+      inStock,
       variants: variants
         .split(",")
         .map((v) => v.trim())
@@ -1386,6 +1395,15 @@ function ProductForm({ product, onCancel, onSave, categories }) {
         placeholder="Sizes, comma separated (optional) e.g. 6in, 8in, 9in"
         className="w-full border border-ink/15 rounded-lg px-4 py-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition"
       />
+      <label className="flex items-center gap-2 text-sm text-ink font-medium cursor-pointer">
+        <input 
+          type="checkbox" 
+          checked={!inStock} 
+          onChange={(e) => setInStock(!e.target.checked)}
+          className="w-4 h-4 accent-rust rounded border-ink/20 shrink-0"
+        />
+        Mark as out of stock
+      </label>
       <div className="flex gap-2 pt-1">
         <button type="submit" className="btn btn-primary flex-1 rounded-lg py-2 text-sm font-semibold">
           Save
